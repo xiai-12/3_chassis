@@ -1,0 +1,59 @@
+#ifndef ROBOCON_TEST_MOTOR_CONTROL_H
+#define ROBOCON_TEST_MOTOR_CONTROL_H
+
+#include "main.h"
+#include "usart.h"
+#include "PID/pid.h"
+#include "Dji/m3508.h"
+#include "FreeRTOS.h"
+#include "FreeRTOSConfig.h"
+#include "task.h"
+#include "string.h"
+#include "Usart/Serial.h"
+#include "Key/key.h"
+#include "Chassis/chassis.h"
+
+
+
+// 电机运动模式选择
+typedef  enum MOTOR_MODE
+{
+    MODE_NONE = 0,
+    MODE_1 =1, // 定速
+    MODE_2 =2, // 定位置
+    MODE_3 =3, // 串级定位置
+}MOTOR_MODE;
+
+// 是否开启调试模式
+typedef  enum MOTOR_DEBUG_MODE
+{
+    DEBUG_TRUE = 1,
+    DEBUG_FALSE = 0,
+}MOTOR_DEBUG_MODE;
+
+// 串口命令解析接收结构体
+typedef struct Serial_CMD_Struct
+{
+    volatile MOTOR_MODE motor_mode;      // 模式选择
+    volatile MOTOR_DEBUG_MODE debug_mode;// 是否开启调试
+    float speed_tar;                     // 目标速度
+    float location_tar;                  // 目标位置
+    float acc;                           // 加速度
+    float v_max;                         // 最大速度
+}Serial_CMD;
+
+
+// pid结构体可外部引用
+extern Serial_CMD Serial_cmd_structor;
+
+extern PID_Structor mode1_pid;
+extern PID_Structor mode2_pid;
+extern PID_Structor mode3_pid_inner;
+extern PID_Structor mode3_pid_outer;
+extern PID_Structor mode4_pid;
+
+void parse_uart_line(char *line);
+void Motor_Reset(void);
+void Parse_serial(void);
+
+#endif //ROBOCON_TEST_MOTOR_CONTROL_H
