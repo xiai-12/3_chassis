@@ -112,6 +112,24 @@ void Parse_cmd_line(char *cmd)
         Serial_cmd_structor.motor_mode = mode;
         SERIAL_printf("mode:%d\r\n",Serial_cmd_structor.motor_mode);
     }
+
+    if (strncmp(cmd,"vx:",3) == 0)
+    {
+        Serial_cmd_structor.vx = (uint8_t)(cmd[3] - '0');
+        SERIAL_printf("vx:%f\r\n",Serial_cmd_structor.vx);
+    }
+    if (strncmp(cmd,"vy:",3) == 0)
+    {
+        Serial_cmd_structor.vx = (uint8_t)(cmd[3] - '0');
+        SERIAL_printf("vy:%f\r\n",Serial_cmd_structor.vx);
+    }
+    if (strncmp(cmd,"w:",2) == 0)
+    {
+        Serial_cmd_structor.vx = (uint8_t)(cmd[2] - '0');
+        SERIAL_printf("w:%f\r\n",Serial_cmd_structor.vx);
+    }
+
+
     // 是否开启调试模式
     if (strncmp(cmd,"debug_mode:",11) == 0)
     {

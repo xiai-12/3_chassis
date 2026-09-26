@@ -40,6 +40,9 @@ typedef struct Serial_CMD_Struct
     float location_tar;                  // 目标位置
     float acc;                           // 加速度
     float v_max;                         // 最大速度
+    float vx;                            // x速度
+    float vy;                            // y速度
+    float w;                             // 角速度
 }Serial_CMD;
 
 
