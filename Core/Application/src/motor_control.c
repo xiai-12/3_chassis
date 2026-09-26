@@ -25,8 +25,7 @@ void StartMotorCtlTask(void *argument)
     const TickType_t xPeriod = pdMS_TO_TICKS(5);
 
     M3508_Init();
-
-        /* Infinite loop */
+    /* Infinite loop */
     for(;;)
     {
         if (Serial_cmd_structor.debug_mode == DEBUG_FALSE)
@@ -35,11 +34,10 @@ void StartMotorCtlTask(void *argument)
             switch (Serial_cmd_structor.motor_mode)
             {
                 case MODE_NONE:
-                    amp[0] =  M3508_speed_ctl(&m3508_data[Motor1_3508],Serial_cmd_structor.speed_tar);
-                    M3508_SendData(&m3508_tx_header,amp);
                     break;
                 case MODE_1:
-
+                    amp[0] =  M3508_speed_ctl(&m3508_data[Motor1_3508],Serial_cmd_structor.speed_tar);
+                    M3508_SendData(&m3508_tx_header,amp);
                     break;
                 case MODE_2:
                     break;

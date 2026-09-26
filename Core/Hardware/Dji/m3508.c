@@ -116,8 +116,6 @@ FDCAN_TxHeaderTypeDef m3508_tx_header;
 //     return (int16_t)res;
 // }
 
-PID_Structor spd_pid;
-
 PID_Improve speed_im = {
     .integral_limit = 1,.integral_limit_val = 50000,
     .variable_integal =  1,.variable_integal_k = 0.003f,
@@ -176,7 +174,10 @@ HAL_StatusTypeDef M3508_Init(void)
         return HAL_ERROR;
     }
 
-    PID_Init(&spd_pid,8.0f,0.3f,6.0f,15000,-15000,&speed_im);
+    for (int i = 0; i < 3; i++)
+    {
+        PID_Init(&m3508_data[i].speed_pid,8.0f,0.3f,6.0f,15000,-15000,&speed_im);
+    }
 
     return HAL_OK;
 }
