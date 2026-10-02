@@ -17,7 +17,7 @@ typedef struct M3508_Motor
 {
     FDCAN_RxHeaderTypeDef rx_header; // 电机can通信返回值接收头
     uint8_t* rx_data_ptr;            // 电机数组接受数组指针
-    uint16_t angle_last;             // 内部电机旋转角度 上次
+    uint16_t angle_last;
     uint16_t angle;                  // 内部电机旋转角度
     int16_t speed;                   // 内部电机旋转速度,rpm
     int16_t amp;                     // 电机旋转电流值

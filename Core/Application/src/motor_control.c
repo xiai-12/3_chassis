@@ -15,14 +15,9 @@ Serial_CMD Serial_cmd_structor={
 int16_t amp_zero[4] = {0};
 int16_t amp[4] = {0};
 
-// 单电机转速实际值
 Chassis_WheelType_t m3508_act;
-// 速度正解算值
 Chassis_Velocity_t chassis_velocity;
-// 单电机位置实际值
-Chassis_WheelType_t chassis_position;
 
-float chassis_yaw = 0.0f;
 
 void StartMotorCtlTask(void *argument)
 {
@@ -32,8 +27,6 @@ void StartMotorCtlTask(void *argument)
 
     M3508_Init();
     Chassis_Init();
-
-    static float vx,vy,w;
     /* Infinite loop */
     for(;;)
     {
@@ -46,45 +39,21 @@ void StartMotorCtlTask(void *argument)
                     break;
                 case MODE_1:
                     // 电调反馈的速度单位是 rpm,是内部转子的速度 ，要转化成 rad/s，同时要的是轮子的速度，也就是外部的速度
-                    m3508_act.RF = (float)m3508_data[Motor1_3508].speed / RAD_S_TO_RPM / Reduce_ration;
-                    m3508_act.RB = (float)m3508_data[Motor2_3508].speed / RAD_S_TO_RPM / Reduce_ration;
-                    m3508_act.LB = (float)m3508_data[Motor3_3508].speed / RAD_S_TO_RPM / Reduce_ration;
-                    m3508_act.LF = (float)m3508_data[Motor4_3508].speed / RAD_S_TO_RPM / Reduce_ration;
+                    m3508_act.LF = (float)m3508_data[Motor1_3508].speed / RAD_S_TO_RPM / Reduce_ration;
+                    m3508_act.LB = (float)m3508_data[Motor2_3508].speed / RAD_S_TO_RPM / Reduce_ration;
+                    m3508_act.RF = (float)m3508_data[Motor3_3508].speed / RAD_S_TO_RPM / Reduce_ration;
+                    m3508_act.RB = (float)m3508_data[Motor4_3508].speed / RAD_S_TO_RPM / Reduce_ration;
                     chassis_velocity = Chassis_FK_Wheel2Body(&m3508_act);
-                    chassis_yaw  += (chassis_velocity.w * 0.005f) / (2 * 3.1415926f) ;
-
-                    // chassis_position.LF = (float)(m3508_data[Motor1_3508].angle - m3508_data[Motor1_3508].angle_last) / 8192.0f ;
-                    // chassis_position.LB = (float)(m3508_data[Motor2_3508].angle - m3508_data[Motor2_3508].angle_last) / 8192.0f ;
-                    // chassis_position.RF = (float)(m3508_data[Motor3_3508].angle - m3508_data[Motor3_3508].angle_last) / 8192.0f ;
-                    // chassis_position.RB = (float)(m3508_data[Motor4_3508].angle - m3508_data[Motor4_3508].angle_last) / 8192.0f ;
 
                     // vx,vy上位机输入的是 m/s，w 输入的单位是 rad/s,经过底盘结算之后的每个轮子的速度 单位是 rad/s ,要转化成 rpm
-                    // yaw = Serial_cmd_structor.w * 0.005f;
-                    // Chassis_Control(Chassis_Global,Chassis_Speed,Serial_cmd_structor.vx,Serial_cmd_structor.vy,Serial_cmd_structor.w,yaw);
-
-                    /* 遥控器在线就用遥控器；掉线退回串口，方便台上调试 */
-                    float vx_1 = (nrf_chassis_cmd.link != 0) ? nrf_chassis_cmd.vx : Serial_cmd_structor.vx;
-                    vx = 0.80f * vx_1 + 0.20f * vx;
-
-                    float vy_1 = (nrf_chassis_cmd.link != 0) ? nrf_chassis_cmd.vy : Serial_cmd_structor.vy;
-                    vy = 0.80f * vy_1 + 0.20f * vy;
-
-                    float w_1 = (nrf_chassis_cmd.link != 0) ? nrf_chassis_cmd.w : Serial_cmd_structor.w;
-                    w = 0.80f * w_1 + 0.20f * w;
-
-                    Chassis_Control(Chassis_Body,Chassis_Speed,vx,vy,w,0);
-                    //Chassis_Control(Chassis_Body,Chassis_Speed,Serial_cmd_structor.vx,Serial_cmd_structor.vy,Serial_cmd_structor.w,0);
-                    amp[0] =  M3508_speed_ctl(&m3508_data[Motor1_3508],Chassis.targetWheel.RF * RAD_S_TO_RPM);
-                    amp[1] =  M3508_speed_ctl(&m3508_data[Motor2_3508],Chassis.targetWheel.RB * RAD_S_TO_RPM);
-                    amp[2] =  M3508_speed_ctl(&m3508_data[Motor3_3508],Chassis.targetWheel.LB * RAD_S_TO_RPM);
-                    amp[3] =  M3508_speed_ctl(&m3508_data[Motor4_3508],Chassis.targetWheel.LF * RAD_S_TO_RPM);
+                    Chassis_Control(Chassis_Body,Chassis_Speed,Serial_cmd_structor.vx,Serial_cmd_structor.vy,Serial_cmd_structor.w,0);
+                    amp[0] =  M3508_speed_ctl(&m3508_data[Motor1_3508],Chassis.targetWheel.LF * RAD_S_TO_RPM);
+                    amp[1] =  M3508_speed_ctl(&m3508_data[Motor2_3508],Chassis.targetWheel.LB * RAD_S_TO_RPM);
+                    amp[2] =  M3508_speed_ctl(&m3508_data[Motor3_3508],Chassis.targetWheel.RF * RAD_S_TO_RPM);
+                    amp[3] =  M3508_speed_ctl(&m3508_data[Motor4_3508],Chassis.targetWheel.RB * RAD_S_TO_RPM);
                     M3508_SendData(&m3508_tx_header,amp);
                     break;
                 case MODE_2:
-                    // turns
-                    // TracePlane.pos_target = Serial_cmd_structor.location_tar;
-                    // Tace_Update(&TracePlane,0.005f);
-                    // Chassis_Control(Chassis_Body,Chassis_Speed,Serial_cmd_structor.vx,Serial_cmd_structor.vy,Serial_cmd_structor.w,0);
                     break;
                 case MODE_3:
                     break;
@@ -124,16 +93,16 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
         switch (hdr.Identifier)
         {
         // dji-m3508
-        case 0x201:
+        case 0x205:
             m3508_motor_callback(&hdr,&m3508_data[Motor1_3508],d);
             break;
-        case 0x202:
+        case 0x206:
             m3508_motor_callback(&hdr,&m3508_data[Motor2_3508],d);
             break;
-        case 0x203:
+        case 0x207:
             m3508_motor_callback(&hdr,&m3508_data[Motor3_3508],d);
             break;
-        case 0x204:
+        case 0x208:
             m3508_motor_callback(&hdr,&m3508_data[Motor4_3508],d);
             break;
 

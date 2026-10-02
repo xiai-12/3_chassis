@@ -12,7 +12,7 @@
 #include "Usart/Serial.h"
 #include "Key/key.h"
 #include "Chassis/chassis.h"
-#include "nrf_cmd.h"
+
 
 
 // 电机运动模式选择
@@ -51,7 +51,6 @@ extern Serial_CMD Serial_cmd_structor;
 
 extern Chassis_WheelType_t m3508_act;
 extern  Chassis_Velocity_t chassis_velocity;
-extern float chassis_yaw;
 
 void parse_uart_line(char *line);
 void Motor_Reset(void);
