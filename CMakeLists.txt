@@ -45,6 +45,12 @@ add_executable(${CMAKE_PROJECT_NAME}
         Core/Hardware/Key/key.c
         Core/Hardware/Key/key.h
         Core/Hardware/Chassis/chassis.c
+        Core/Hardware/Nrf/Control_slave.hpp
+        Core/Hardware/Nrf/Control_slave.h
+        Core/Hardware/Nrf/Control_slave.cpp
+        Core/Hardware/Nrf/nrf24.c
+        Core/Application/src/nrf_cmd.c
+        Core/Application/inc/nrf_cmd.h
 )
 
 # print float

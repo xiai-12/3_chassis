@@ -60,6 +60,12 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define NRF_CE_Pin GPIO_PIN_3
+#define NRF_CE_GPIO_Port GPIOE
+#define NRF_CSN_Pin GPIO_PIN_4
+#define NRF_CSN_GPIO_Port GPIOE
+#define NRF_IRQ_Pin GPIO_PIN_13
+#define NRF_IRQ_GPIO_Port GPIOC
 #define BUTTON_Pin GPIO_PIN_10
 #define BUTTON_GPIO_Port GPIOE
 #define LED1_Pin GPIO_PIN_12

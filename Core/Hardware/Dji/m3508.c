@@ -5,7 +5,7 @@
 
 #include <string.h>
 
-M3508_t m3508_data[3];
+M3508_t m3508_data[4];
 
 // m3508 发送头
 FDCAN_TxHeaderTypeDef m3508_tx_header;
@@ -118,7 +118,7 @@ FDCAN_TxHeaderTypeDef m3508_tx_header;
 
 PID_Improve speed_im = {
     .integral_limit = 1,.integral_limit_val = 50000,
-    .variable_integal =  1,.variable_integal_k = 0.003f,
+    .variable_integal =  1,.variable_integal_k = 0.002f,
     .deriv_on_meas = 1,
     .deriv_filter = 1, .deriv_filter_alpha = 0.8f
 };
@@ -144,7 +144,7 @@ HAL_StatusTypeDef M3508_Init(void)
     m3508_tx_header.DataLength = FDCAN_DLC_BYTES_8;
     m3508_tx_header.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
     m3508_tx_header.FDFormat = FDCAN_CLASSIC_CAN;
-    m3508_tx_header.Identifier = 0x1FF;
+    m3508_tx_header.Identifier = 0x200;
     m3508_tx_header.MessageMarker = 0x01;
     m3508_tx_header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
     m3508_tx_header.TxFrameType= FDCAN_DATA_FRAME;
@@ -174,7 +174,7 @@ HAL_StatusTypeDef M3508_Init(void)
         return HAL_ERROR;
     }
 
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 4; i++)
     {
         PID_Init(&m3508_data[i].speed_pid,8.0f,0.3f,6.0f,15000,-15000,&speed_im);
     }
@@ -183,6 +183,7 @@ HAL_StatusTypeDef M3508_Init(void)
 }
 
 // m3508电机速度环
+// speed_tar 为外部的速度
 int16_t M3508_speed_ctl(M3508_t* motor,float speed_tar)
 {
     motor->speed_pid.Tar= speed_tar * Reduce_ration;// 单位 rpm  19.2032-减速比

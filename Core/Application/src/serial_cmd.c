@@ -108,6 +108,9 @@ void Parse_cmd_line(char *cmd)
             Motor_Reset();
             Serial_cmd_structor.speed_tar = 0;
             Serial_cmd_structor.location_tar = 0;
+            Serial_cmd_structor.vx = 0;
+            Serial_cmd_structor.vy = 0;
+            Serial_cmd_structor.w = 0;
         }
         Serial_cmd_structor.motor_mode = mode;
         SERIAL_printf("mode:%d\r\n",Serial_cmd_structor.motor_mode);
@@ -115,18 +118,24 @@ void Parse_cmd_line(char *cmd)
 
     if (strncmp(cmd,"vx:",3) == 0)
     {
-        Serial_cmd_structor.vx = (uint8_t)(cmd[3] - '0');
+        float vx = Parse_float(cmd,3);
+        vx = (vx > 5.0f)?5.0f:((vx<-5.0f)?-5.0f:vx);
+        Serial_cmd_structor.vx = vx;
         SERIAL_printf("vx:%f\r\n",Serial_cmd_structor.vx);
     }
     if (strncmp(cmd,"vy:",3) == 0)
     {
-        Serial_cmd_structor.vx = (uint8_t)(cmd[3] - '0');
-        SERIAL_printf("vy:%f\r\n",Serial_cmd_structor.vx);
+        float vy = Parse_float(cmd,3);
+        vy = (vy > 5.0f)?5.0f:((vy<-5.0f)?-5.0f:vy);
+        Serial_cmd_structor.vy = vy;
+        SERIAL_printf("vy:%f\r\n",Serial_cmd_structor.vy);
     }
     if (strncmp(cmd,"w:",2) == 0)
     {
-        Serial_cmd_structor.vx = (uint8_t)(cmd[2] - '0');
-        SERIAL_printf("w:%f\r\n",Serial_cmd_structor.vx);
+        float w = Parse_float(cmd,2);
+        w = (w > 8.0f)?8.0f:((w<-8.0f)?-8.0f:w);
+        Serial_cmd_structor.w = w;
+        SERIAL_printf("w:%f\r\n",Serial_cmd_structor.w);
     }
 
 
@@ -170,8 +179,10 @@ void Parse_cmd_line(char *cmd)
         switch (Serial_cmd_structor.motor_mode)
         {
             case MODE_NONE:
+
                 break;
             case MODE_1:
+                pid_ptr = &(m3508_data[Motor1_3508].speed_pid);
                 break;
             case MODE_2:
                 break;
@@ -195,6 +206,12 @@ void Parse_cmd_line(char *cmd)
             {
                 pid_ptr->kd = Parse_float(cmd,3);
             }
+            for (uint8_t i = 1; i < 4; i++)
+            {
+                m3508_data[i].speed_pid.kp = pid_ptr->kp;
+                m3508_data[i].speed_pid.ki = pid_ptr->ki;
+                m3508_data[i].speed_pid.kd = pid_ptr->kd;
+            }
             SERIAL_printf("kp:%3f ki:%3f kd:%3f\r\n",pid_ptr->kp,pid_ptr->ki,pid_ptr->kd);
         }
         return;
@@ -210,11 +227,25 @@ void StartSerialTxTask(void *argument)
     /* Infinite loop */
     for(;;)
     {
+
         if (Serial_cmd_structor.debug_mode == DEBUG_FALSE)
         {
             switch (Serial_cmd_structor.motor_mode)
             {
             case MODE_1:
+                SERIAL_printf("mode1:%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n",nrf_chassis_cmd.vx,nrf_chassis_cmd.vy,nrf_chassis_cmd.w,m3508_data[Motor1_3508].speed_pid.Tar,
+                                m3508_data[Motor1_3508].speed_pid.Act,m3508_data[Motor1_3508].speed_pid.Out,chassis_velocity.v_x,chassis_velocity.v_y,chassis_velocity.w);
+
+                // SERIAL_printf("motor1:%f,%f,%f,%f,%f,%f\r\n",Serial_cmd_structor.vx,Serial_cmd_structor.vy,Serial_cmd_structor.w,
+                // m3508_data[Motor1_3508].speed_pid.Tar,m3508_data[Motor1_3508].speed_pid.Out,m3508_data[Motor1_3508].speed_pid.Act);
+                //  SERIAL_printf("motor2:%f,%f,%f,%f,%f,%f\r\n",Serial_cmd_structor.vx,Serial_cmd_structor.vy,Serial_cmd_structor.w,
+                //  m3508_data[Motor2_3508].speed_pid.Tar,m3508_data[Motor2_3508].speed_pid.Out,m3508_data[Motor2_3508].speed);
+                //  SERIAL_printf("motor3:%f,%f,%f,%f,%f,%f\r\n",Serial_cmd_structor.vx,Serial_cmd_structor.vy,Serial_cmd_structor.w,
+                //  m3508_data[Motor3_3508].speed_pid.Tar,m3508_data[Motor3_3508].speed_pid.Out,m3508_data[Motor3_3508].speed);
+                //  SERIAL_printf("motor4:%f,%f,%f,%f,%f,%f\r\n",Serial_cmd_structor.vx,Serial_cmd_structor.vy,Serial_cmd_structor.w,
+                //  m3508_data[Motor4_3508].speed_pid.Tar,m3508_data[Motor4_3508].speed_pid.Out,m3508_data[Motor4_3508].speed);
+
+                //SERIAL_printf("chassis:%f,%f,%f,%f\r\n",chassis_velocity.v_x,chassis_velocity.v_y,chassis_velocity.w,chassis_yaw);
                 break;
             case MODE_2:
                 break;

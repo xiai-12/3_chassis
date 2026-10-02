@@ -68,10 +68,22 @@ const osThreadAttr_t SerialCmdTask_attributes = {
   .priority = (osPriority_t) osPriorityAboveNormal,
   .stack_size = 512 * 4
 };
+/* Definitions for NrfCmdTask */
+osThreadId_t NrfCmdTaskHandle;
+const osThreadAttr_t NrfCmdTask_attributes = {
+  .name = "NrfCmdTask",
+  .priority = (osPriority_t) osPriorityAboveNormal5,
+  .stack_size = 1024 * 4
+};
 /* Definitions for SerialRxQueue */
 osMessageQueueId_t SerialRxQueueHandle;
 const osMessageQueueAttr_t SerialRxQueue_attributes = {
   .name = "SerialRxQueue"
+};
+/* Definitions for NrfIrqSem */
+osSemaphoreId_t NrfIrqSemHandle;
+const osSemaphoreAttr_t NrfIrqSem_attributes = {
+  .name = "NrfIrqSem"
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -82,6 +94,7 @@ const osMessageQueueAttr_t SerialRxQueue_attributes = {
 void StartSerialTxTask(void *argument);
 void StartMotorCtlTask(void *argument);
 void StartSerialCmdTask(void *argument);
+void StartNrfCmdTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -98,6 +111,10 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
+
+  /* Create the semaphores(s) */
+  /* creation of NrfIrqSem */
+  NrfIrqSemHandle = osSemaphoreNew(1, 1, &NrfIrqSem_attributes);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -124,6 +141,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of SerialCmdTask */
   SerialCmdTaskHandle = osThreadNew(StartSerialCmdTask, NULL, &SerialCmdTask_attributes);
+
+  /* creation of NrfCmdTask */
+  NrfCmdTaskHandle = osThreadNew(StartNrfCmdTask, NULL, &NrfCmdTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -187,6 +207,24 @@ __weak void StartSerialCmdTask(void *argument)
     osDelay(1);
   }
   /* USER CODE END StartSerialCmdTask */
+}
+
+/* USER CODE BEGIN Header_StartNrfCmdTask */
+/**
+* @brief Function implementing the NrfCmdTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartNrfCmdTask */
+__weak void StartNrfCmdTask(void *argument)
+{
+  /* USER CODE BEGIN StartNrfCmdTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartNrfCmdTask */
 }
 
 /* Private application code --------------------------------------------------*/

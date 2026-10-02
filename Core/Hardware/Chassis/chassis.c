@@ -8,6 +8,7 @@
 #include "main.h"
 #include "chassis.h"
 
+Chassis_t Chassis;
 /*
  *        布局示意图：
  *                       ↑ X (前进方向)
@@ -19,7 +20,13 @@
  *               1 └─────────────────────┘ 2
  *                 LB                   RB
  *
- *  9.26 规定的是 电机顺时针旋转方向为正
+ *  9.26 规定的是 电机逆时针旋转方向为正
+ *
+ *  实际：
+ *     id4      id1
+ *
+ *
+ *     id3      id2
  */
 
 Chassis_WheelType_t Chassis_IK_Body2Wheel(Chassis_Velocity_t* BodyVelocity);                // 逆运动学解算（机器人坐标系）
@@ -63,9 +70,9 @@ void Chassis_Init(void) {
  * 底盘状态机控制
  * @param frame 参考坐标系
  * @param mode  控制模式
- * @param x     x轴控制量（速度模式下为线速度mm/s，位置模式下为绝对坐标X）
- * @param y     y轴控制量（速度模式下为线速度mm/s，位置模式下为绝对坐标Y）
- * @param z     z轴控制量（若不为0，代表外界强制给定的自转角速度；若为0，代表角度锁死）
+ * @param x     x轴控制量（速度模式下为线速度m/s，位置模式下为绝对坐标X）
+ * @param y     y轴控制量（速度模式下为线速度m/s，位置模式下为绝对坐标Y）
+ * @param z     z轴控制量（若不为0，代表外界强制给定的自转角速度；若为0，代表角度锁死） rad/s
  * @param para  当前底盘的真实Yaw角（弧度）
  */
 void Chassis_Control(Chassis_Frame_t frame, Chassis_Mode_t mode, float x, float y, float z, float para) {
@@ -142,10 +149,10 @@ Chassis_WheelType_t Chassis_IK_Body2Wheel(Chassis_Velocity_t* BodyVelocity) {
     float v_y = BodyVelocity->v_y;
     float w = BodyVelocity->w;
 
-    wheel.LF = (+v_x * SQRT2_2 - v_y * SQRT2_2 + w * CHASSIS_R) / CHASSIS_S;
-    wheel.LB = (+v_x * SQRT2_2 + v_y * SQRT2_2 + w * CHASSIS_R) / CHASSIS_S;
-    wheel.RB = (-v_x * SQRT2_2 + v_y * SQRT2_2 + w * CHASSIS_R) / CHASSIS_S;
-    wheel.RF = (-v_x * SQRT2_2 - v_y * SQRT2_2 + w * CHASSIS_R) / CHASSIS_S;
+    wheel.LF = -(+v_x * SQRT2_2 - v_y * SQRT2_2 - w * CHASSIS_R) / CHASSIS_S;
+    wheel.LB = -(+v_x * SQRT2_2 + v_y * SQRT2_2 - w * CHASSIS_R) / CHASSIS_S;
+    wheel.RB = -(-v_x * SQRT2_2 + v_y * SQRT2_2 - w * CHASSIS_R) / CHASSIS_S;
+    wheel.RF = -(-v_x * SQRT2_2 - v_y * SQRT2_2 - w * CHASSIS_R) / CHASSIS_S;
 
     return wheel;
 }

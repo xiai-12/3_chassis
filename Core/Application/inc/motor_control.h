@@ -12,7 +12,7 @@
 #include "Usart/Serial.h"
 #include "Key/key.h"
 #include "Chassis/chassis.h"
-
+#include "nrf_cmd.h"
 
 
 // 电机运动模式选择
@@ -49,11 +49,9 @@ typedef struct Serial_CMD_Struct
 // pid结构体可外部引用
 extern Serial_CMD Serial_cmd_structor;
 
-extern PID_Structor mode1_pid;
-extern PID_Structor mode2_pid;
-extern PID_Structor mode3_pid_inner;
-extern PID_Structor mode3_pid_outer;
-extern PID_Structor mode4_pid;
+extern Chassis_WheelType_t m3508_act;
+extern  Chassis_Velocity_t chassis_velocity;
+extern float chassis_yaw;
 
 void parse_uart_line(char *line);
 void Motor_Reset(void);
