@@ -5,7 +5,7 @@
 
 #include <string.h>
 
-M3508_t m3508_data[3];
+M3508_t m3508_data[4];
 
 // m3508 发送头
 FDCAN_TxHeaderTypeDef m3508_tx_header;
@@ -174,7 +174,7 @@ HAL_StatusTypeDef M3508_Init(void)
         return HAL_ERROR;
     }
 
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 4; i++)
     {
         PID_Init(&m3508_data[i].speed_pid,8.0f,0.3f,6.0f,15000,-15000,&speed_im);
     }
@@ -183,6 +183,7 @@ HAL_StatusTypeDef M3508_Init(void)
 }
 
 // m3508电机速度环
+// speed_tar 为外部的速度
 int16_t M3508_speed_ctl(M3508_t* motor,float speed_tar)
 {
     motor->speed_pid.Tar= speed_tar * Reduce_ration;// 单位 rpm  19.2032-减速比
