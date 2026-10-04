@@ -12,5 +12,6 @@
 
 
 void SERIAL_printf (char *fmt, ...);
+void Vision_printf (char *fmt, ...);
 
 #endif //INC_3_CAN_LOOPBACK_SERIAL_H

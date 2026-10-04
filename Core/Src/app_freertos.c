@@ -75,10 +75,22 @@ const osThreadAttr_t NrfCmdTask_attributes = {
   .priority = (osPriority_t) osPriorityAboveNormal5,
   .stack_size = 1024 * 4
 };
+/* Definitions for VisionCmdTask */
+osThreadId_t VisionCmdTaskHandle;
+const osThreadAttr_t VisionCmdTask_attributes = {
+  .name = "VisionCmdTask",
+  .priority = (osPriority_t) osPriorityAboveNormal7,
+  .stack_size = 512 * 4
+};
 /* Definitions for SerialRxQueue */
 osMessageQueueId_t SerialRxQueueHandle;
 const osMessageQueueAttr_t SerialRxQueue_attributes = {
   .name = "SerialRxQueue"
+};
+/* Definitions for VisionRxQueue */
+osMessageQueueId_t VisionRxQueueHandle;
+const osMessageQueueAttr_t VisionRxQueue_attributes = {
+  .name = "VisionRxQueue"
 };
 /* Definitions for NrfIrqSem */
 osSemaphoreId_t NrfIrqSemHandle;
@@ -95,6 +107,7 @@ void StartSerialTxTask(void *argument);
 void StartMotorCtlTask(void *argument);
 void StartSerialCmdTask(void *argument);
 void StartNrfCmdTask(void *argument);
+void StartVisionCmdTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -128,6 +141,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of SerialRxQueue */
   SerialRxQueueHandle = osMessageQueueNew (64, sizeof(uint8_t), &SerialRxQueue_attributes);
 
+  /* creation of VisionRxQueue */
+  VisionRxQueueHandle = osMessageQueueNew (32, sizeof(uint8_t), &VisionRxQueue_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -144,6 +160,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of NrfCmdTask */
   NrfCmdTaskHandle = osThreadNew(StartNrfCmdTask, NULL, &NrfCmdTask_attributes);
+
+  /* creation of VisionCmdTask */
+  VisionCmdTaskHandle = osThreadNew(StartVisionCmdTask, NULL, &VisionCmdTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -225,6 +244,24 @@ __weak void StartNrfCmdTask(void *argument)
     osDelay(1);
   }
   /* USER CODE END StartNrfCmdTask */
+}
+
+/* USER CODE BEGIN Header_StartVisionCmdTask */
+/**
+* @brief Function implementing the VisionCmdTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartVisionCmdTask */
+__weak void StartVisionCmdTask(void *argument)
+{
+  /* USER CODE BEGIN StartVisionCmdTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartVisionCmdTask */
 }
 
 /* Private application code --------------------------------------------------*/

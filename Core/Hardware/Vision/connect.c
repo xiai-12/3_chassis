@@ -3,28 +3,31 @@
 //
 #include "connect.h"
 
-void Visual_Receive(uint8_t *data) {
-    uint32_t temp;
-    float floatValue;
+Vision_Lia_raw vision_lia_raw={0};
 
-    temp = data[5] << 24 | data[4] << 16 | data[3] << 8 | data[2];
-    memcpy(&floatValue, &temp, sizeof(float));
+/*
+ * 共11个字节
+ * data                           explain
+ *  0,1   -- 0x5A 0xA5             包头
+ *  2   -- 0x01                    ID
+ *  4,3 -- vx                      vx速度
+ *  6,5 -- vy                      vy速度
+ *  8,7 -- w                       w速度
+ *  9   -- crc                     校验码
+ *  10  -- 0xED                    EOF
+ */
 
-    temp = data[9] << 24 | data[8] << 16 | data[7] << 8 | data[6];
-    memcpy(&floatValue, &temp, sizeof(float));
-
-    temp = data[13] << 24 | data[12] << 16 | data[11] << 8 | data[10];
-    memcpy(&floatValue, &temp, sizeof(float));
-
-    temp = data[17] << 24 | data[16] << 16 | data[15] << 8 | data[14];
-    memcpy(&floatValue, &temp, sizeof(float));
-
-    temp = data[21] << 24 | data[20] << 16 | data[19] << 8 | data[18];
-    memcpy(&floatValue, &temp, sizeof(float));
-
-    temp = data[25] << 24 | data[24] << 16 | data[23] << 8 | data[22];
-    memcpy(&floatValue, &temp, sizeof(float));
-
-
-    //    uart_printf("%f, %f\r\n", visualData.data1, visualData.data2);
+void Visual_Receive(const uint8_t *data) {
+    vision_lia_raw.header1 = data[0];
+    vision_lia_raw.header2 = data[1];
+    vision_lia_raw.x = (int16_t)(data[4] << 8 | data[3]);
+    vision_lia_raw.y = (int16_t)(data[6] << 8 | data[5]);
+    vision_lia_raw.w = (int16_t)(data[8] << 8 | data[7]);
+    vision_lia_raw.crc = data[9];
+    vision_lia_raw.tail = data[10];
 }
+
+
+
+
+

@@ -17,6 +17,12 @@ Serial_CMD Serial_cmd_structor={
     .kt = 2.0f
 };
 
+Vision_CMD Vision_cmd_structor={
+    .vx = 0.0f,
+    .vy = 0.0f,
+    .w = 0.0f,
+};
+
 int16_t amp_zero[4] = {0};
 int16_t amp[4] = {0};
 int16_t tt_f[4]; // 前馈反馈值
@@ -78,11 +84,14 @@ void StartMotorCtlTask(void *argument)
                     // vx,vy上位机输入的是 m/s，w 输入的单位是 rad/s,经过底盘结算之后的每个轮子的速度 单位是 rad/s ,要转化成 rpm
 
                     /* 遥控器在线就用遥控器；掉线退回串口，方便台上调试 */
-                    float vx_1 = (nrf_chassis_cmd.link != 0) ? nrf_chassis_cmd.vx : Serial_cmd_structor.vx;
+                    //float vx_1 = (nrf_chassis_cmd.link != 0) ? nrf_chassis_cmd.vx : Serial_cmd_structor.vx;
+                    float vx_1 = Vision_cmd_structor.vx;
                     vx = 0.80f * vx_1 + 0.20f * vx;
-                    float vy_1 = (nrf_chassis_cmd.link != 0) ? nrf_chassis_cmd.vy : Serial_cmd_structor.vy;
+                    //float vy_1 = (nrf_chassis_cmd.link != 0) ? nrf_chassis_cmd.vy : Serial_cmd_structor.vy;
+                    float vy_1 = Vision_cmd_structor.vx;
                     vy = 0.80f * vy_1 + 0.20f * vy;
-                    float w_1 = (nrf_chassis_cmd.link != 0) ? nrf_chassis_cmd.w : Serial_cmd_structor.w;
+                    //float w_1 = (nrf_chassis_cmd.link != 0) ? nrf_chassis_cmd.w : Serial_cmd_structor.w;
+                    float w_1 = Vision_cmd_structor.vx;
                     w = 0.80f * w_1 + 0.20f * w;
                     Chassis_Control(Chassis_Body,Chassis_Speed,vx,vy,w,0);
 

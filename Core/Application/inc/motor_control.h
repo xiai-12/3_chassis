@@ -47,16 +47,25 @@ typedef struct Serial_CMD_Struct
 }Serial_CMD;
 
 
+// 视觉命令解析接收结构体
+typedef struct Vision_CMD_Structor
+{
+    float vx;
+    float vy;
+    float w;
+}Vision_CMD;
+
 // pid结构体可外部引用
 extern Serial_CMD Serial_cmd_structor;
+extern Vision_CMD Vision_cmd_structor;
 
 extern  Chassis_WheelType_t m3508_vel_act;
 extern  Chassis_WheelType_t m3508_pos_act;
 extern  Chassis_Velocity_t chassis_velocity;
 extern  Chassis_Velocity_t chassis_position;
 
-void parse_uart_line(char *line);
+void Parse_serial_line(char *cmd);
 void Motor_Reset(void);
-void Parse_serial(void);
+void Parse_vision_line(uint8_t* cmd);
 
 #endif //ROBOCON_TEST_MOTOR_CONTROL_H

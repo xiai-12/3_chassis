@@ -1,61 +1,95 @@
 #include "main.h"
 #include "motor_control.h"
 #include "motion_plane.h"
+#include "Vision/connect.h"
 
-#define Cmd_line_max 64  // 串口接收最大数量
-uint8_t Serial_rxdata;   // 串口接收单字节
-static uint8_t cmd_line[Cmd_line_max]; // 串口接收缓存数组
-static uint8_t cmd_line_len = 0;       // 数组索引
+#define serial_line_max 64                   // 串口接收最大数量
+static uint8_t serial_line[serial_line_max]; // 串口接收缓存数组
+volatile uint8_t serial_flag = 0;            // 串口中断标志位
+volatile uint16_t serial_len  = 0;           // 串口数据长度
+
+#define vision_line_max 32
+static uint8_t vision_line[vision_line_max];
+volatile uint8_t vision_flag = 0;
+volatile uint16_t vision_len  = 0;
 
 // 函数声明
-float Parse_float(char *cmd,uint8_t index); // 串口浮点数解析函数，index为浮点数第一位的索引
-void Parse_cmd_line(char *cmd);// 串口命令解析函数
+static  float Parse_float(char *cmd,uint8_t index); // 串口浮点数解析函数，index为浮点数第一位的索引
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // 串口任务函数，用于将队列的数据转移到缓存数组里，同时对串口命令进行解析
 void StartSerialCmdTask(void *argument)
 {
-    /* USER CODE BEGIN StartSerialTask */
-    HAL_UART_Receive_IT(&huart1, &Serial_rxdata, 1);
+    /* USER CODE BEGIN StartVisionCmdTask */
+    // 使用Ex函数，接收不定长数据
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart1, serial_line,sizeof(serial_line));
+    // 关闭DMA传输过半中断（HAL库默认开启，但我们只需要接收完成中断）
+    __HAL_DMA_DISABLE_IT(huart1.hdmarx, DMA_IT_HT);
     /* Infinite loop */
     for(;;)
     {
-        uint8_t rx_data;
-        // 判断是否有新数据
-        if (osMessageQueueGet(SerialRxQueueHandle,&rx_data,0,100) != osOK)
+        if (serial_flag)
         {
-            continue;
+            serial_flag = 0;
+            Parse_serial_line((char *)serial_line);
         }
-        // 判断命令是否发送完，命令统一以“\n”结束
-        if (rx_data == '\n')
-        {
-            cmd_line[cmd_line_len] = '\0';
-            Parse_cmd_line((char *)cmd_line);
-            cmd_line_len = 0;// 解析完后，软件实现数组清空
-        }
-        else if (cmd_line_len < Cmd_line_max-1)
-        {
-            cmd_line[cmd_line_len++] = rx_data;
-        }
-        else
-        {
-            cmd_line_len = 0;
-        }
+        osDelay(5);
     }
-    /* USER CODE END StartSerialTask */
+
+    /* USER CODE END StartVisionCmdTask */
 }
 
+
+// 视觉串口接收解析函数
+void StartVisionCmdTask(void *argument)
+{
+    /* USER CODE BEGIN StartVisionCmdTask */
+    // 使用Ex函数，接收不定长数据
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart2, vision_line,sizeof(vision_line));
+    // 关闭DMA传输过半中断（HAL库默认开启，但我们只需要接收完成中断）
+    __HAL_DMA_DISABLE_IT(huart2.hdmarx, DMA_IT_HT);
+    /* Infinite loop */
+    for(;;)
+    {
+        if (vision_flag)
+        {
+            vision_flag = 0;
+            Parse_vision_line(vision_line);
+        }
+        osDelay(5);
+    }
+
+    /* USER CODE END StartVisionCmdTask */
+}
 
 // 串口接收中断，用于将接收到的数据转移到队列
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
-    if (huart == &huart1) {
-        osMessageQueuePut(SerialRxQueueHandle, &Serial_rxdata, 0, 0);
-        HAL_UART_Receive_IT(&huart1, &Serial_rxdata, 1);
+    if (huart == &huart1)
+    {
+        serial_len  = Size;
+        serial_flag = 1;
+        /* 必须在中断里立刻重新挂起，否则 IDLE 之后 DMA 已经停了 */
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, serial_line, sizeof(serial_line));
+        __HAL_DMA_DISABLE_IT(huart1.hdmarx, DMA_IT_HT);
+    }
+
+    if (huart == &huart2)
+    {
+        vision_len  = Size;
+        vision_flag = 1;
+        /* 必须在中断里立刻重新挂起，否则 IDLE 之后 DMA 已经停了 */
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart2, vision_line, sizeof(vision_line));
+        __HAL_DMA_DISABLE_IT(huart2.hdmarx, DMA_IT_HT);
     }
 }
 
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 浮点数解析函数，index为浮点数第一个出现的位置，用于取出完成的浮点数据
-float Parse_float(char *cmd,uint8_t index)
+static  float Parse_float(char *cmd,uint8_t index)
 {
     char* pos = cmd + index;
     float val = 0.0f;
@@ -96,7 +130,7 @@ float Parse_float(char *cmd,uint8_t index)
  * 4.位置目标值设置： location_tar:[%f] 用于设定目标位置期望值
  * 5.参数调节： kp\ki\kd:[%f] 用于调节pid参数，需在调试模式下进行
  */
-void Parse_cmd_line(char *cmd)
+void Parse_serial_line(char *cmd)
 {
     // 模式选择
     if (strncmp(cmd,"mode:",5) == 0)
@@ -220,6 +254,28 @@ void Parse_cmd_line(char *cmd)
 }
 
 /*
+ * 视觉串口解析函数
+ */
+void Parse_vision_line(uint8_t* cmd)
+{
+    static  float scale_rate = 1000.0f;
+    uint8_t crc_check = 0;
+    for (uint8_t i = 0; i < 9; i++)
+    {
+        crc_check ^= cmd[i];
+    }
+    if (cmd[0] == 0x5A && cmd[1] == 0xA5 && cmd[2] == 0x01  && cmd[9] == crc_check && cmd[10] == 0xED)
+    {
+        Visual_Receive(cmd);
+        Vision_cmd_structor.vx = (float)vision_lia_raw.x / scale_rate;
+        Vision_cmd_structor.vy = (float)vision_lia_raw.y / scale_rate;
+        Vision_cmd_structor.w = (float)vision_lia_raw.w / scale_rate;
+        Vision_printf("vision:%f,%f,%f\r\n",Vision_cmd_structor.vx,Vision_cmd_structor.vy,Vision_cmd_structor.w);
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
  * 串口发送函数，根据模式选择发送不同内容
  */
 void StartSerialTxTask(void *argument)
@@ -256,7 +312,7 @@ void StartSerialTxTask(void *argument)
                 break;
             }
         }
-        osDelay(20);
+        osDelay(30);
     }
     /* USER CODE END StartSerialTXTask */
 }

@@ -15,3 +15,12 @@ void SERIAL_printf (char *fmt, ...){
     va_end(arg_ptr);
     HAL_UART_Transmit(&huart1,(uint8_t  *)buff,strlen(buff),100);
 }
+
+void Vision_printf (char *fmt, ...){
+    char buff[256];
+    va_list arg_ptr;
+    va_start(arg_ptr, fmt);
+    vsnprintf(buff, sizeof(buff),fmt, arg_ptr);
+    va_end(arg_ptr);
+    HAL_UART_Transmit(&huart2,(uint8_t  *)buff,strlen(buff),100);
+}

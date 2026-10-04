@@ -37,7 +37,6 @@ add_executable(${CMAKE_PROJECT_NAME}
         Core/Hardware/Dji/m3508.c
         Core/Hardware/Dji/m3508.h
         Core/Hardware/PID/pid.c
-        Core/Application/src/serial_cmd.c
         Core/Application/src/motor_control.c
         Core/Application/inc/motor_control.h
         Core/Application/src/motion_plane.c
@@ -53,6 +52,7 @@ add_executable(${CMAKE_PROJECT_NAME}
         Core/Application/inc/nrf_cmd.h
         Core/Hardware/Vision/connect.c
         Core/Hardware/Vision/connect.h
+        Core/Application/src/serial_cmd.c
 )
 
 # print float
