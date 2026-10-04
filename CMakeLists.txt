@@ -51,6 +51,8 @@ add_executable(${CMAKE_PROJECT_NAME}
         Core/Hardware/Nrf/nrf24.c
         Core/Application/src/nrf_cmd.c
         Core/Application/inc/nrf_cmd.h
+        Core/Hardware/Vision/connect.c
+        Core/Hardware/Vision/connect.h
 )
 
 # print float

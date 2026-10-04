@@ -20,7 +20,7 @@ Class_ControlSlave::Class_ControlSlave()
   cmd_.r_y = 0U;
   cmd_.r_x = 0U;
   cmd_.keys = 0U;
-  cmd_.battery = 0U;
+  cmd_.button = 0U;
   cmd_.seq = 0U;
 }
 
@@ -61,7 +61,7 @@ uint8_t Class_ControlSlave::Parse(const uint8_t pkt[CONTROL_PKT_LEN], ControlCom
   out->r_y = GetU16(&pkt[7]);
   out->r_x = GetU16(&pkt[9]);
   out->keys = GetU16(&pkt[11]);
-  out->battery = GetU16(&pkt[13]);
+  out->button = GetU16(&pkt[13]);
   out->seq = pkt[2];
   return 1U;
 }

@@ -7,7 +7,7 @@ volatile uint8_t  radio_init_ok = 0U;   /* 0 = 模块没应答 */
 volatile uint32_t radio_rx_cnt  = 0U;   /* 收到的有效包数 */
 volatile uint32_t radio_bad_cnt = 0U;   /* 校验失败的包数 */
 
-Nrf_ChassisCmd_t nrf_chassis_cmd = {0.0f, 0.0f, 0.0f, 0U};
+Nrf_ChassisCmd_t nrf_chassis_cmd = {0.0f, 0.0f, 0.0f, 0U,0U,0U};
 
 
 // 归一化，限制在 -1 ~ 1 之间
@@ -52,6 +52,8 @@ void Nrf_UpdateChassisCmd(void)
     nrf_chassis_cmd.vy   = vy;
     nrf_chassis_cmd.w    = w;
     nrf_chassis_cmd.link = 1;
+    nrf_chassis_cmd.keys = c.keys;
+    nrf_chassis_cmd.button = c.button;
 }
 
 
@@ -60,14 +62,22 @@ void StartNrfCmdTask(void *argument)
     uint8_t rx[CONTROL_PKT_LEN];
     uint8_t ack[CONTROL_ACK_LEN];
     ControlCommand cmd;
-    //uint8_t new_packet;
+    uint8_t new_packet;
 
     radio_init_ok = Nrf24_InitRx();
-    //SERIAL_printf("\r\n[radio] init=%u  (1=OK, 0=SPI/module fail)\r\n",(unsigned)radio_init_ok);
+    if (radio_init_ok == 0U)
+    {
+        for (uint8_t i=0; i<3; i++)
+        {
+            radio_init_ok = Nrf24_InitRx();
+            if (radio_init_ok == 1U) break;
+        }
+    }
+    SERIAL_printf("\r\n[radio] init=%u  (1=OK, 0=SPI/module fail)\r\n",(unsigned)radio_init_ok);
 
     for (;;)
     {
-        //new_packet = 0U;
+        new_packet = 0U;
         if (Nrf24_Poll(rx) != 0U)
         {
             if (ControlSlave_Parse(rx, &cmd) != 0U)
@@ -86,14 +96,11 @@ void StartNrfCmdTask(void *argument)
         }
 
         Nrf_UpdateChassisCmd();
-        // if (new_packet != 0)
-        // {
-        //     SERIAL_printf("RX %lu seq=%u l_x=%u l_y=%u r_x=%u | vx=%.2f vy=%.2f w=%.2f link=%u\r\n",
-        //                   (unsigned long)radio_rx_cnt, (unsigned)cmd.seq,
-        //                   (unsigned)cmd.l_x, (unsigned)cmd.l_y, (unsigned)cmd.r_x,
-        //                   nrf_chassis_cmd.vx, nrf_chassis_cmd.vy, nrf_chassis_cmd.w,
-        //                   (unsigned)nrf_chassis_cmd.link);
-        // }
+        if (new_packet != 0)
+        {
+            SERIAL_printf("RX %lu keys=%u button=%u\r\n",
+                          (unsigned long)radio_rx_cnt,cmd.keys,cmd.button);
+        }
         osDelay(2);
     }
 }

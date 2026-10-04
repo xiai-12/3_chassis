@@ -6,8 +6,8 @@
 
 // 梯形速度曲线规划初始化
 Trace TracePlane={
-    .vmax = 6000.0f,  //  最大速度，单位 rpm / r/min(转每分钟)
-    .acc = 6000.0f    //  加速度，单位 rpm/s  即 r/(min*s)  (转/每分每秒)
+    .vmax = 1.0f,  //  最大速度，单位 m/s
+    .acc = 0.2f    //  加速度，单位 m/s
 };
 
 
@@ -15,16 +15,17 @@ Trace TracePlane={
  * 轨迹规划函数
  *  根据目标位置与实际位置的差值 err计算刹车速度v_brake = sqrt(2*a_cc*err)
  *  未达到v_max，继续按 acc线性加速
+ *  目标值、实际值 单位是 m/s
  */
 void Tace_Update(Trace* t,float dt)
 {
-    float err = (t->pos_target - t->pos_act)/8191.0f;  // err 为 电机圈数误差
+    float err = t->pos_target - t->pos_act;  // err 单位为 m
     float err_abs = fabsf(err);
     float dir = (err >= 0.0f)?1.0f:-1.0f; // 判断电机运动方向
-    float v_brake = sqrtf(2.0f * t->acc * err_abs * 60.0f);// v_brake 刹车速度 单位 rpm
+    float v_brake = sqrtf(2.0f * t->acc * err_abs);// v_brake 刹车速度 单位 rpm
 
     // 到目标位置附近，直接归零，防止在目标点附近反复振荡
-    if (err_abs < 0.025f)
+    if (err_abs < 0.001f)
     {
         t->vref = 0.0f;
         return;

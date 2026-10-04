@@ -21,8 +21,8 @@
 #define W_SIGN    (1.0f)           /* 右摇杆左右 -> w  */
 
 /* 速度上限（先给保守值，跑顺了再往上加） */
-#define VX_MAX    0.5f              /* m/s */
-#define VY_MAX    0.5f              /* m/s */
+#define VX_MAX    1.0f              /* m/s */
+#define VY_MAX    1.0f              /* m/s */
 #define W_MAX     2.0f              /* rad/s */
 
 /* 轮子线速度预算：转子 9255rpm ÷19.2032 ÷9.5493 ×0.075m = 3.785 m/s，留 15% 余量 */
@@ -33,6 +33,8 @@ typedef struct
     float   vx;     /* m/s，机体坐标系，向前为正 */
     float   vy;     /* m/s，机体坐标系，向左为正 */
     float   w;      /* rad/s，正值为顺时针（俯视） */
+    uint16_t keys;  // 滑杆按键
+    uint16_t button; // 按键
     uint8_t link;   /* 1 = 遥控器在线（200 ms 内有包） */
 } Nrf_ChassisCmd_t;
 

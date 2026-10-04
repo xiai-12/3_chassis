@@ -121,23 +121,29 @@ void Parse_cmd_line(char *cmd)
         float vx = Parse_float(cmd,3);
         vx = (vx > 5.0f)?5.0f:((vx<-5.0f)?-5.0f:vx);
         Serial_cmd_structor.vx = vx;
-        SERIAL_printf("vx:%f\r\n",Serial_cmd_structor.vx);
+        SERIAL_printf("vx:%f,vy:%f,w:%f\r\n",Serial_cmd_structor.vx,Serial_cmd_structor.vy,Serial_cmd_structor.w);
     }
     if (strncmp(cmd,"vy:",3) == 0)
     {
         float vy = Parse_float(cmd,3);
         vy = (vy > 5.0f)?5.0f:((vy<-5.0f)?-5.0f:vy);
         Serial_cmd_structor.vy = vy;
-        SERIAL_printf("vy:%f\r\n",Serial_cmd_structor.vy);
+        SERIAL_printf("vx:%f,vy:%f,w:%f\r\n",Serial_cmd_structor.vx,Serial_cmd_structor.vy,Serial_cmd_structor.w);
     }
     if (strncmp(cmd,"w:",2) == 0)
     {
         float w = Parse_float(cmd,2);
         w = (w > 8.0f)?8.0f:((w<-8.0f)?-8.0f:w);
         Serial_cmd_structor.w = w;
-        SERIAL_printf("w:%f\r\n",Serial_cmd_structor.w);
+        SERIAL_printf("vx:%f,vy:%f,w:%f\r\n",Serial_cmd_structor.vx,Serial_cmd_structor.vy,Serial_cmd_structor.w);
     }
 
+    // 前馈系数选择
+    if (strncmp(cmd,"kt:",3) == 0)
+    {
+        Serial_cmd_structor.kt = Parse_float(cmd,3);
+        SERIAL_printf("kt:%f\r\n",Serial_cmd_structor.kt);
+    }
 
     // 是否开启调试模式
     if (strncmp(cmd,"debug_mode:",11) == 0)
@@ -159,18 +165,12 @@ void Parse_cmd_line(char *cmd)
     }
 
     // 加速度期望值选择
-    if (strncmp(cmd,"acc:",4) == 0)
+    if (strncmp(cmd,"angle:",6) == 0)
     {
-        Serial_cmd_structor.acc = Parse_float(cmd,4);
-        SERIAL_printf("acc:%f\r\n",Serial_cmd_structor.acc);
+        Serial_cmd_structor.angle = Parse_float(cmd,6);
+        SERIAL_printf("angle:%f\r\n",Serial_cmd_structor.angle);
     }
 
-    // 最大速度选择
-    if (strncmp(cmd,"v_max:",6) == 0)
-    {
-        Serial_cmd_structor.v_max = Parse_float(cmd,6);
-        SERIAL_printf("v_max:%f\r\n",Serial_cmd_structor.v_max);
-    }
 
     // pid参数调节，须在调试模式下进行，要对那个pid调参就赋值那个pid
     if (Serial_cmd_structor.debug_mode == DEBUG_TRUE)
@@ -179,10 +179,13 @@ void Parse_cmd_line(char *cmd)
         switch (Serial_cmd_structor.motor_mode)
         {
             case MODE_NONE:
+
                 break;
             case MODE_1:
+                pid_ptr = &(m3508_data[Motor1_3508].speed_pid);
                 break;
             case MODE_2:
+                pid_ptr = &(m3508_data[Motor1_3508].speed_pid);
                 break;
             case MODE_3:
                 break;
@@ -204,7 +207,13 @@ void Parse_cmd_line(char *cmd)
             {
                 pid_ptr->kd = Parse_float(cmd,3);
             }
-            SERIAL_printf("kp:%3f ki:%3f kd:%3f\r\n",pid_ptr->kp,pid_ptr->ki,pid_ptr->kd);
+            for (uint8_t i = 1; i < 4; i++)
+            {
+                m3508_data[i].speed_pid.kp = pid_ptr->kp;
+                m3508_data[i].speed_pid.ki = pid_ptr->ki;
+                m3508_data[i].speed_pid.kd = pid_ptr->kd;
+            }
+            SERIAL_printf("kp:%3f ki:%3f kd:%3f kt:%3f\r\n",pid_ptr->kp,pid_ptr->ki,pid_ptr->kd,Serial_cmd_structor.kt);
         }
         return;
     }
@@ -219,22 +228,27 @@ void StartSerialTxTask(void *argument)
     /* Infinite loop */
     for(;;)
     {
-        if (Serial_cmd_structor.debug_mode == DEBUG_FALSE)
+        //SERIAL_printf("keys:%d,button:%d\r\n",nrf_chassis_cmd.keys,nrf_chassis_cmd.button);
+        if ((Serial_cmd_structor.debug_mode == DEBUG_FALSE || nrf_chassis_cmd.keys == 4))
         {
             switch (Serial_cmd_structor.motor_mode)
             {
             case MODE_1:
-                SERIAL_printf("motor1:%f,%f,%f,%f,%f,%f,%f\r\n",Serial_cmd_structor.vx,Serial_cmd_structor.vy,Serial_cmd_structor.w,
-                m3508_data[Motor1_3508].speed_pid.Tar,m3508_data[Motor1_3508].speed_pid.Out,m3508_data[Motor1_3508].speed_pid.Act,m3508_data[Motor1_3508].turns*8191.0f);
-                // SERIAL_printf("motor2:%f,%f,%f,%f,%f,%f,%f\r\n",Serial_cmd_structor.vx,Serial_cmd_structor.vy,Serial_cmd_structor.w,
-                // m3508_data[Motor2_3508].speed_pid.Tar,m3508_data[Motor2_3508].speed_pid.Out,m3508_data[Motor2_3508].speed,m3508_data[Motor2_3508].turns*8191.0f);
-                // SERIAL_printf("motor3:%f,%f,%f,%f,%f,%f,%f\r\n",Serial_cmd_structor.vx,Serial_cmd_structor.vy,Serial_cmd_structor.w,
-                // m3508_data[Motor3_3508].speed_pid.Tar,m3508_data[Motor3_3508].speed_pid.Out,m3508_data[Motor3_3508].speed,m3508_data[Motor3_3508].turns*8191.0f);
-                // SERIAL_printf("motor4:%f,%f,%f,%f,%f,%f,%f\r\n",Serial_cmd_structor.vx,Serial_cmd_structor.vy,Serial_cmd_structor.w,
-                // m3508_data[Motor4_3508].speed_pid.Tar,m3508_data[Motor4_3508].speed_pid.Out,m3508_data[Motor4_3508].speed,m3508_data[Motor4_3508].turns*8191.0f);
-                SERIAL_printf("chassis:%f,%f,%f\r\n",chassis_velocity.v_x,chassis_velocity.v_y,chassis_velocity.w);
+                SERIAL_printf("mode1:%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n",
+                                Chassis.targetVel.v_x,Chassis.targetVel.v_y,Chassis.targetVel.w,
+                                m3508_data[Motor1_3508].speed_pid.Tar,m3508_data[Motor1_3508].speed_pid.Act,
+                                m3508_data[Motor2_3508].speed_pid.Tar,m3508_data[Motor2_3508].speed_pid.Act,
+                                m3508_data[Motor3_3508].speed_pid.Tar,m3508_data[Motor3_3508].speed_pid.Act,
+                                m3508_data[Motor4_3508].speed_pid.Tar,m3508_data[Motor4_3508].speed_pid.Act);
                 break;
             case MODE_2:
+                SERIAL_printf("%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n",Chassis.targetVel.v_x,Chassis.targetVel.v_y,Chassis.targetVel.w,
+                                TracePlane.vref,TracePlane.pos_act,TracePlane.pos_target,
+                                chassis_velocity.v_x,chassis_velocity.v_y,chassis_position.v_x,chassis_position.v_y,
+                                m3508_data[Motor1_3508].speed_pid.Tar,m3508_data[Motor1_3508].speed_pid.Act,
+                                m3508_data[Motor2_3508].speed_pid.Tar,m3508_data[Motor2_3508].speed_pid.Act,
+                                m3508_data[Motor3_3508].speed_pid.Tar,m3508_data[Motor3_3508].speed_pid.Act,
+                                m3508_data[Motor4_3508].speed_pid.Tar,m3508_data[Motor4_3508].speed_pid.Act);
                 break;
             case MODE_3:
                 break;

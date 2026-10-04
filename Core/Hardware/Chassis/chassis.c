@@ -8,7 +8,6 @@
 #include "main.h"
 #include "chassis.h"
 
-Chassis_t Chassis;
 /*
  *        布局示意图：
  *                       ↑ X (前进方向)
@@ -28,6 +27,8 @@ Chassis_t Chassis;
  *
  *     id3      id2
  */
+
+Chassis_t Chassis;
 
 Chassis_WheelType_t Chassis_IK_Body2Wheel(Chassis_Velocity_t* BodyVelocity);                // 逆运动学解算（机器人坐标系）
 Chassis_WheelType_t Chassis_IK_Global2Wheel(Chassis_Velocity_t* GlobalVelocity, float Yaw); // 逆运动学解算（世界坐标系）
@@ -72,7 +73,7 @@ void Chassis_Init(void) {
  * @param mode  控制模式
  * @param x     x轴控制量（速度模式下为线速度m/s，位置模式下为绝对坐标X）
  * @param y     y轴控制量（速度模式下为线速度m/s，位置模式下为绝对坐标Y）
- * @param z     z轴控制量（若不为0，代表外界强制给定的自转角速度；若为0，代表角度锁死） rad/s
+ * @param z     z轴控制量（若不为0，代表外界强制给定的自转角速度；若为0，代表角度锁死）
  * @param para  当前底盘的真实Yaw角（弧度）
  */
 void Chassis_Control(Chassis_Frame_t frame, Chassis_Mode_t mode, float x, float y, float z, float para) {
@@ -149,10 +150,10 @@ Chassis_WheelType_t Chassis_IK_Body2Wheel(Chassis_Velocity_t* BodyVelocity) {
     float v_y = BodyVelocity->v_y;
     float w = BodyVelocity->w;
 
-    wheel.LF = -(+v_x * SQRT2_2 - v_y * SQRT2_2 - w * CHASSIS_R) / CHASSIS_S;
-    wheel.LB = -(+v_x * SQRT2_2 + v_y * SQRT2_2 - w * CHASSIS_R) / CHASSIS_S;
-    wheel.RB = -(-v_x * SQRT2_2 + v_y * SQRT2_2 - w * CHASSIS_R) / CHASSIS_S;
-    wheel.RF = -(-v_x * SQRT2_2 - v_y * SQRT2_2 - w * CHASSIS_R) / CHASSIS_S;
+    wheel.LF = (-v_x * SQRT2_2 + v_y * SQRT2_2 + w * CHASSIS_R) / CHASSIS_S;
+    wheel.LB = (-v_x * SQRT2_2 - v_y * SQRT2_2 + w * CHASSIS_R) / CHASSIS_S;
+    wheel.RB = (+v_x * SQRT2_2 - v_y * SQRT2_2 + w * CHASSIS_R) / CHASSIS_S;
+    wheel.RF = (+v_x * SQRT2_2 + v_y * SQRT2_2 + w * CHASSIS_R) / CHASSIS_S;
 
     return wheel;
 }
@@ -186,8 +187,8 @@ Chassis_Velocity_t Chassis_FK_Wheel2Body(Chassis_WheelType_t* Wheel) {
     float RF = Wheel->RF;
     float RB = Wheel->RB;
 
-    BodyVelocity.v_x = (+LF + LB - RB - RF) * CHASSIS_S * SQRT2 / 4.0f;
-    BodyVelocity.v_y = (-LF + LB + RB - RF) * CHASSIS_S * SQRT2 / 4.0f;
+    BodyVelocity.v_x = -(+LF + LB - RB - RF) * CHASSIS_S * SQRT2 / 4.0f;
+    BodyVelocity.v_y = -(-LF + LB + RB - RF) * CHASSIS_S * SQRT2 / 4.0f;
     BodyVelocity.w = (LF + LB + RB + RF) * CHASSIS_S / (4.0f * CHASSIS_R);
 
     return BodyVelocity;

@@ -12,6 +12,7 @@
 #include "Usart/Serial.h"
 #include "Key/key.h"
 #include "Chassis/chassis.h"
+#include "nrf_cmd.h"
 
 
 
@@ -38,8 +39,8 @@ typedef struct Serial_CMD_Struct
     volatile MOTOR_DEBUG_MODE debug_mode;// 是否开启调试
     float speed_tar;                     // 目标速度
     float location_tar;                  // 目标位置
-    float acc;                           // 加速度
-    float v_max;                         // 最大速度
+    float angle;                         // 角度
+    float kt;                            // 前馈系数
     float vx;                            // x速度
     float vy;                            // y速度
     float w;                             // 角速度
@@ -49,8 +50,10 @@ typedef struct Serial_CMD_Struct
 // pid结构体可外部引用
 extern Serial_CMD Serial_cmd_structor;
 
-extern Chassis_WheelType_t m3508_act;
+extern  Chassis_WheelType_t m3508_vel_act;
+extern  Chassis_WheelType_t m3508_pos_act;
 extern  Chassis_Velocity_t chassis_velocity;
+extern  Chassis_Velocity_t chassis_position;
 
 void parse_uart_line(char *line);
 void Motor_Reset(void);

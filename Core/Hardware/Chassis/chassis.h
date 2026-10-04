@@ -56,7 +56,7 @@
         float RF;
         float RB;
         float LB;
-    } Chassis_WheelType_t;
+    } Chassis_WheelType_t;// rad/s
 #endif
 #endif
 

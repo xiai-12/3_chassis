@@ -56,7 +56,7 @@ typedef struct
   uint16_t r_y;
   uint16_t r_x;
   uint16_t keys;
-  uint16_t battery;
+  uint16_t button;
   uint8_t seq;
 } ControlCommand;
 

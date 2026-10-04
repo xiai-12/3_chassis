@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="BackendCodeEditorSettings">
+    <option name="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7DD19193_002D6F49_002D5BEF_002D8250_002DA71ECFB6DF3B_002Fd_003ACore_002Fd_003AApplication_002Fd_003Asrc_002Ff_003Amotor_005Fcontrol_002Ec/@EntryIndexedValue" value="ForceIncluded" type="string" />
     <option name="/Default/CodeInspection/GeneratedCode/GeneratedCodeRegions/=Component_0020Designer_0020generated_0020code/@EntryIndexedValue" value="Component Designer generated code" type="string" />
     <option name="/Default/CodeInspection/GeneratedCode/GeneratedCodeRegions/=Designer_0020generated_0020code/@EntryIndexedValue" value="Designer generated code" type="string" />
     <option name="/Default/CodeInspection/GeneratedCode/GeneratedCodeRegions/=Web_0020Form_0020Designer_0020generated_0020code/@EntryIndexedValue" value="Web Form Designer generated code" type="string" />
