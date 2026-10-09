@@ -16,54 +16,45 @@ volatile uint8_t vision_flag = 0;
 volatile uint16_t vision_len  = 0;
 
 // 函数声明
-static  float Parse_float(char *cmd,uint8_t index); // 串口浮点数解析函数，index为浮点数第一位的索引
+static float Parse_float(char *cmd,uint8_t index); // 串口浮点数解析函数，index为浮点数第一位的索引
+static void Radar_Filter(float rx, float ry, float ryaw,float* val);
 
 
-/* ===================== 雷达滤波 ===================== */
-#define RADAR_TS         0.01f
-#define RADAR_JUMP_MAX   0.04f
-
-static Filter_LP_t lpf_x, lpf_y, lpf_yaw;
-static float   last_rx, last_ry;
-static uint8_t med_n = 0, first = 1;
-static float   medx[3] = {0}, medy[3] = {0};
-
-/* 角度低通：先对“误差”做 ±π 归一，避免跨 ±π 时输出乱跳 */
-static float LPF_Yaw(Filter_LP_t *f, float yaw)
+// 雷达数据滤波
+#define Filter_alpha   0.8f
+static float last_rx, last_ry,last_yaw;
+// static float radar_data[3][5] = {0};// 3个数据通道队列
+// static uint8_t count=0;
+static void Radar_Filter(float rx, float ry, float ryaw,float* val)
 {
-    float d = yaw - f->lastYn;
-    while (d >  (float)M_PI) d -= 2.0f * (float)M_PI;
-    while (d < -(float)M_PI) d += 2.0f * (float)M_PI;
-    f->lastYn += f->alpha * d;
-    return f->lastYn;
-}
 
-/* 每收到一帧雷达数据调用一次；返回 1 = 采纳，0 = 当跳变丢弃 */
-void Radar_Filter(float rx, float ry, float ryaw, float *ox, float *oy, float *oyaw)
-{
-    if (first) {
-        last_rx = rx; last_ry = ry;
-        lpf_x.lastYn = rx; lpf_y.lastYn = ry; lpf_yaw.lastYn = ryaw;
-        medx[0]=medx[1]=medx[2]=rx; medy[0]=medy[1]=medy[2]=ry; med_n = 3;first = 0;
-        *ox = rx; *oy = ry; *oyaw = ryaw;
-    }
     // 跳变剔除
-    float dx = rx - last_rx, dy = ry - last_ry;
-    if (sqrtf(dx*dx + dy*dy) > RADAR_JUMP_MAX ) {
-        *ox = lpf_x.lastYn; *oy = lpf_y.lastYn; *oyaw = lpf_yaw.lastYn;
+    if (rx - last_rx > 0.04f || ry - last_ry > 0.04f)
+    {
+        val[0] = last_rx; val[1] = last_ry; val[2] = last_yaw;
+        return;
     }
-    last_rx = rx; last_ry = ry;
-    // 中值滤波
-    medx[2]=medx[1]; medx[1]=medx[0]; medx[0]=rx;
-    medy[2]=medy[1]; medy[1]=medy[0]; medy[0]=ry;
-    float mx = (medx[0]>medx[1]) ? ((medx[1]>medx[2])?medx[1]:((medx[0]>medx[2])?medx[2]:medx[0]))
-                                 : ((medx[0]>medx[2])?medx[0]:((medx[1]>medx[2])?medx[2]:medx[1]));
-    float my = (medy[0]>medy[1]) ? ((medy[1]>medy[2])?medy[1]:((medy[0]>medy[2])?medy[2]:medy[0]))
-                                 : ((medy[0]>medy[2])?medy[0]:((medy[1]>medy[2])?medy[2]:medy[1]));
+
     // 低通滤波
-    *ox   = LPF_Filter(&lpf_x, mx);
-    *oy   = LPF_Filter(&lpf_y, my);
-    *oyaw = LPF_Yaw(&lpf_yaw, ryaw);
+    val[0] = Filter_alpha * rx + (1 - Filter_alpha)* last_rx;
+    val[1] = Filter_alpha * ry + (1 - Filter_alpha)* last_ry;
+    float yaw_err = ryaw - last_yaw;
+    if (yaw_err > M_PI)   yaw_err -= 2.0f * (float)M_PI;
+    else if (yaw_err < -M_PI) yaw_err += 2.0f *(float) M_PI;
+    val[2] = last_yaw + Filter_alpha * yaw_err;
+
+    // 均值滤波
+    // if (count < 5)
+    // {
+    //     radar_data[0][count] = rx;radar_data[1][count] = ry;radar_data[2][count] = ryaw;
+    // }
+    // else
+    // {
+    //     radar_data[0][0]
+    // }
+
+    last_rx = rx; last_ry = ry;last_yaw = ryaw;
+    //count ++;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -82,6 +73,7 @@ void StartSerialCmdTask(void *argument)
         {
             serial_flag = 0;
             Parse_serial_line((char *)serial_line);
+            memset(serial_line,0,sizeof(serial_line));
         }
         osDelay(5);
     }
@@ -99,9 +91,6 @@ void StartVisionCmdTask(void *argument)
     // 关闭DMA传输过半中断（HAL库默认开启，但我们只需要接收完成中断）
     __HAL_DMA_DISABLE_IT(huart2.hdmarx, DMA_IT_HT);
 
-    Filter_Init_LPF(&lpf_x,   RADAR_TS, 5.0f);
-    Filter_Init_LPF(&lpf_y,   RADAR_TS, 5.0f);
-    Filter_Init_LPF(&lpf_yaw, RADAR_TS, 3.0f);
     /* Infinite loop */
     for(;;)
     {
@@ -109,6 +98,7 @@ void StartVisionCmdTask(void *argument)
         {
             vision_flag = 0;
             Parse_vision_line(vision_line);
+            memset(vision_line,0,sizeof(vision_line));
         }
         osDelay(5);
     }
@@ -176,80 +166,65 @@ static  float Parse_float(char *cmd,uint8_t index)
 // 命令解析函数，用于解析上位机上送发来的命令
 void Parse_serial_line(char *cmd)
 {
-    // 模式选择
-    if (strncmp(cmd,"mode:",5) == 0)
-    {
-        uint8_t mode = (uint8_t)(cmd[5] - '0');
-        // 模式切换时清除所有
-        if (mode != Serial_cmd_structor.motor_mode)
-        {
-            Motor_Reset();
-            Serial_cmd_structor.speed_tar = 0;
-            Serial_cmd_structor.location_tar = 0;
-            Serial_cmd_structor.vx = 0;
-            Serial_cmd_structor.vy = 0;
-            Serial_cmd_structor.w = 0;
-        }
-        Serial_cmd_structor.motor_mode = mode;
-        SERIAL_printf("mode:%d\r\n",Serial_cmd_structor.motor_mode);
-    }
+    uint8_t mode;
 
-    if (strncmp(cmd,"vx:",3) == 0)
+    // mode debug_mode x y  w speed_tar location_tar angle
+    switch (cmd[0])
     {
-        float vx = Parse_float(cmd,3);
-        vx = (vx > 5.0f)?5.0f:((vx<-5.0f)?-5.0f:vx);
-        Serial_cmd_structor.vx = vx;
-        SERIAL_printf("vx:%f,vy:%f,w:%f\r\n",Serial_cmd_structor.vx,Serial_cmd_structor.vy,Serial_cmd_structor.w);
+        // mode
+        case 'm':
+            mode = (uint8_t)(cmd[5] - '0');
+            // 模式切换时清除所有
+            if (mode != Serial_cmd_structor.motor_mode)
+            {
+                Motor_Reset();
+                Serial_cmd_structor.speed_tar = 0;
+                Serial_cmd_structor.location_tar = 0;
+                Serial_cmd_structor.x = 0;
+                Serial_cmd_structor.y = 0;
+                Serial_cmd_structor.w = 0;
+            }
+            Serial_cmd_structor.motor_mode = mode;
+            SERIAL_printf("mode:%d\r\n",Serial_cmd_structor.motor_mode);
+        break;
+        // debug_mode
+        case 'd':
+            Serial_cmd_structor.debug_mode = (uint8_t)(cmd[11] - '0');
+            SERIAL_printf("debug_mode:%d\r\n",Serial_cmd_structor.debug_mode);
+        break;
+        // x
+        case 'x':
+            Serial_cmd_structor.x = Parse_float(cmd,2);
+            SERIAL_printf("vx:%f,vy:%f,w:%f\r\n",Serial_cmd_structor.x,Serial_cmd_structor.y,Serial_cmd_structor.w);
+        break;
+        // y
+        case 'y':
+            Serial_cmd_structor.y = Parse_float(cmd,2);
+            SERIAL_printf("vx:%f,vy:%f,w:%f\r\n",Serial_cmd_structor.x,Serial_cmd_structor.y,Serial_cmd_structor.w);
+        break;
+        // w
+        case 'w':
+            Serial_cmd_structor.w = Parse_float(cmd,2) ;
+            SERIAL_printf("vx:%f,vy:%f,w:%f\r\n",Serial_cmd_structor.x,Serial_cmd_structor.y,Serial_cmd_structor.w);
+        break;
+        // speed_tar
+        case 's':
+            Serial_cmd_structor.speed_tar = Parse_float(cmd,10);
+            SERIAL_printf("speed_tar:%f\r\n",Serial_cmd_structor.speed_tar);
+        break;
+        // location_tar
+        case 'l':
+            Serial_cmd_structor.location_tar = Parse_float(cmd,13);
+            SERIAL_printf("location_tar:%f\r\n",Serial_cmd_structor.location_tar);
+        break;
+        // angle
+        case 'a':
+            Serial_cmd_structor.angle = Parse_float(cmd,6);
+            SERIAL_printf("angle:%f\r\n",Serial_cmd_structor.angle);
+        break;
+        default:
+        break;
     }
-    if (strncmp(cmd,"vy:",3) == 0)
-    {
-        float vy = Parse_float(cmd,3);
-        vy = (vy > 5.0f)?5.0f:((vy<-5.0f)?-5.0f:vy);
-        Serial_cmd_structor.vy = vy;
-        SERIAL_printf("vx:%f,vy:%f,w:%f\r\n",Serial_cmd_structor.vx,Serial_cmd_structor.vy,Serial_cmd_structor.w);
-    }
-    if (strncmp(cmd,"w:",2) == 0)
-    {
-        float w = Parse_float(cmd,2);
-        w = (w > 8.0f)?8.0f:((w<-8.0f)?-8.0f:w);
-        Serial_cmd_structor.w = w;
-        SERIAL_printf("vx:%f,vy:%f,w:%f\r\n",Serial_cmd_structor.vx,Serial_cmd_structor.vy,Serial_cmd_structor.w);
-    }
-
-    // 前馈系数选择
-    if (strncmp(cmd,"kt:",3) == 0)
-    {
-        Serial_cmd_structor.kt = Parse_float(cmd,3);
-        SERIAL_printf("kt:%f\r\n",Serial_cmd_structor.kt);
-    }
-
-    // 是否开启调试模式
-    if (strncmp(cmd,"debug_mode:",11) == 0)
-    {
-        Serial_cmd_structor.debug_mode = (uint8_t)(cmd[11] - '0');
-        SERIAL_printf("debug_mode:%d\r\n",Serial_cmd_structor.debug_mode);
-    }
-    // 速度期望值选择
-    if (strncmp(cmd,"speed_tar:",10) == 0)
-    {
-        Serial_cmd_structor.speed_tar = Parse_float(cmd,10);
-        SERIAL_printf("speed_tar:%f\r\n",Serial_cmd_structor.speed_tar);
-    }
-    // 位置期望值选择
-    if (strncmp(cmd,"location_tar:",13) == 0)
-    {
-        Serial_cmd_structor.location_tar = Parse_float(cmd,13);
-        SERIAL_printf("location_tar:%f\r\n",Serial_cmd_structor.location_tar);
-    }
-
-    // 加速度期望值选择
-    if (strncmp(cmd,"angle:",6) == 0)
-    {
-        Serial_cmd_structor.angle = Parse_float(cmd,6);
-        SERIAL_printf("angle:%f\r\n",Serial_cmd_structor.angle);
-    }
-
-
     // pid参数调节，须在调试模式下进行，要对那个pid调参就赋值那个pid
     if (Serial_cmd_structor.debug_mode == DEBUG_TRUE)
     {
@@ -263,7 +238,8 @@ void Parse_serial_line(char *cmd)
                 pid_ptr = &(m3508_data[Motor1_3508].speed_pid);
                 break;
             case MODE_2:
-                pid_ptr = &(m3508_data[Motor1_3508].speed_pid);
+                //pid_ptr = &(m3508_data[Motor1_3508].speed_pid);
+                pid_ptr = &chassis_pos_vx;
                 break;
             case MODE_3:
                 break;
@@ -273,24 +249,40 @@ void Parse_serial_line(char *cmd)
         // 解析 pid参数
         if (pid_ptr != NULL)
         {
-            if (strncmp(cmd,"kp:",3) == 0)
+            // kp ki kd kt
+            if (cmd[0] == 'k' && cmd[2] == ':')
             {
-                pid_ptr->kp = Parse_float(cmd,3);
+                switch (cmd[1])
+                {
+                case 'p':
+                    Serial_cmd_structor.kp = Parse_float(cmd,3);
+                    SERIAL_printf("kp:%f\r\n",Serial_cmd_structor.kp);
+                    pid_ptr->kp = Serial_cmd_structor.kp;
+                    break;
+                case 'i':
+                    Serial_cmd_structor.ki = Parse_float(cmd,3);
+                    SERIAL_printf("ki:%f\r\n",Serial_cmd_structor.ki);
+                    pid_ptr->ki = Serial_cmd_structor.ki;
+                    break;
+                case 'd':
+                    Serial_cmd_structor.kd = Parse_float(cmd,3);
+                    SERIAL_printf("kd:%f\r\n",Serial_cmd_structor.kd);
+                    pid_ptr->kd = Serial_cmd_structor.kd;
+                    break;
+                case 't':
+                    Serial_cmd_structor.kt = Parse_float(cmd,3);
+                    SERIAL_printf("kt:%f\r\n",Serial_cmd_structor.kt);
+                    break;
+                default:
+                    break;
+                }
             }
-            else if (strncmp(cmd,"ki:",3) == 0)
-            {
-                pid_ptr->ki = Parse_float(cmd,3);
-            }
-            else if (strncmp(cmd,"kd:",3) == 0)
-            {
-                pid_ptr->kd = Parse_float(cmd,3);
-            }
-            for (uint8_t i = 1; i < 4; i++)
-            {
-                m3508_data[i].speed_pid.kp = pid_ptr->kp;
-                m3508_data[i].speed_pid.ki = pid_ptr->ki;
-                m3508_data[i].speed_pid.kd = pid_ptr->kd;
-            }
+            // for (uint8_t i = 1; i < 4; i++)
+            // {
+            //     m3508_data[i].speed_pid.kp = pid_ptr->kp;
+            //     m3508_data[i].speed_pid.ki = pid_ptr->ki;
+            //     m3508_data[i].speed_pid.kd = pid_ptr->kd;
+            // }
             SERIAL_printf("kp:%3f ki:%3f kd:%3f kt:%3f\r\n",pid_ptr->kp,pid_ptr->ki,pid_ptr->kd,Serial_cmd_structor.kt);
         }
         return;
@@ -298,13 +290,13 @@ void Parse_serial_line(char *cmd)
 }
 
 
-/*
- * 视觉串口解析函数
- */
+//视觉串口解析函数
 void Parse_vision_line(uint8_t* cmd)
 {
+    // 换算倍率
     static float v_scale_rate = 1000.0f;
     static float pos_scale_rate = 10000.0f;
+    // crc校验
     uint8_t crc_check = 0;
     for (uint8_t i = 0; i < 9; i++)
     {
@@ -312,6 +304,7 @@ void Parse_vision_line(uint8_t* cmd)
     }
 
     static uint8_t count = 0;
+
     switch (cmd[0])
     {
     case 0x5A:
@@ -321,8 +314,7 @@ void Parse_vision_line(uint8_t* cmd)
             Vision_cmd_structor.vx =  (float)vision_lia_raw.x / v_scale_rate;
             Vision_cmd_structor.vy =  (float)vision_lia_raw.y / v_scale_rate;
             Vision_cmd_structor.w  =  (float)vision_lia_raw.w / v_scale_rate;
-
-            //SERIAL_printf("vision_speed:%f,%f,%f\r\n",Vision_cmd_structor.vx,Vision_cmd_structor.vy,Vision_cmd_structor.w);
+            SERIAL_printf("vision_speed:%f,%f,%f\r\n",Vision_cmd_structor.vx,Vision_cmd_structor.vy,Vision_cmd_structor.w);
         }
         break;
     case 0x7E:
@@ -336,12 +328,12 @@ void Parse_vision_line(uint8_t* cmd)
             float ry   = (float)vision_lia_raw_pos.pos_y / pos_scale_rate;
             float ryaw = (float)vision_lia_raw_pos.yaw   / pos_scale_rate;
 
-            float fx, fy, fyaw;
-            Radar_Filter( rx, ry, ryaw,&fx,&fy,&fyaw);
+            float val[3];
+            Radar_Filter( rx, ry, ryaw,val);
 
-            Vision_cmd_structor.pos_x = fx;
-            Vision_cmd_structor.pos_y = fy;
-            Vision_cmd_structor.yaw   = fyaw;
+            Vision_cmd_structor.pos_x = val[0];
+            Vision_cmd_structor.pos_y = val[1];
+            Vision_cmd_structor.yaw   = val[2];
             if (count >= 5)
             {
                 SERIAL_printf("%f,%f,%f,%f,%f\r\n",Vision_cmd_structor.pos_x,Vision_cmd_structor.pos_y,Vision_cmd_structor.yaw,

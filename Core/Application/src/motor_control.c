@@ -1,18 +1,12 @@
 #include "motor_control.h"
 #include "motion_plane.h"
 
-static int16_t limit_constrain_(int32_t amp)
-{
-    return (int16_t)(amp>15000?15000:(amp<-15000?-15000:amp));
-}
+
 
 // 串口解析接收结构体
 Serial_CMD Serial_cmd_structor={
     .motor_mode = MODE_NONE,
     .debug_mode = DEBUG_TRUE,
-    .speed_tar = 0,
-    .location_tar = 0,
-    .angle = 0,
     .kt = 2.0f
 };
 
@@ -21,17 +15,11 @@ Vision_CMD Vision_cmd_structor = {0};
 int16_t amp_zero[4] = {0};
 int16_t amp[4] = {0};
 int16_t tt_f[4]; // 前馈反馈值
-// 单电机转速实际值
-Chassis_WheelType_t m3508_vel_act;
-// 单电机位置实际值
-Chassis_WheelType_t m3508_pos_act;
-// 速度正解算值
-Chassis_Velocity_t chassis_velocity;
-// 位置正解算值
-Chassis_Velocity_t chassis_position;
 
-
-float chassis_yaw = 0.0f;
+static int16_t limit_constrain_(int32_t amp)
+{
+    return (int16_t)(amp>15000?15000:(amp<-15000?-15000:amp));
+}
 
 void StartMotorCtlTask(void *argument)
 {
@@ -42,11 +30,9 @@ void StartMotorCtlTask(void *argument)
     M3508_Init();
     Chassis_Init();
 
-    static float vx,vy,w,yaw;
+    static float vx,vy,w;
     static uint8_t stop_flag = 0;
     static uint16_t btn_last = 0;
-    static float t=0.0f;
-    static float angle = 0.0f;
     /* Infinite loop */
     for(;;)
     {
@@ -71,6 +57,7 @@ void StartMotorCtlTask(void *argument)
                     break;
                 case MODE_1:
                     // 电调反馈的速度单位是 rpm,是内部转子的速度 ，要转化成 rad/s，同时要的是轮子的速度，也就是外部的速度
+                    // Chassis_WheelType_t m3508_vel_act;
                     // m3508_act.RF = (float)m3508_data[Motor1_3508].speed / RAD_S_TO_RPM / Reduce_ration;
                     // m3508_act.RB = (float)m3508_data[Motor2_3508].speed / RAD_S_TO_RPM / Reduce_ration;
                     // m3508_act.LB = (float)m3508_data[Motor3_3508].speed / RAD_S_TO_RPM / Reduce_ration;
@@ -101,13 +88,13 @@ void StartMotorCtlTask(void *argument)
 
                     Chassis.GlobalPos.x   = Vision_cmd_structor.pos_y;
                     Chassis.GlobalPos.y   = Vision_cmd_structor.pos_x;
-                    Chassis.GlobalPos.yaw = -1.0f * Vision_cmd_structor.yaw;
+                    Chassis.GlobalPos.yaw = Vision_cmd_structor.yaw;
 
-                    float tgt_x = Serial_cmd_structor.vy;
-                    float tgt_y = Serial_cmd_structor.vx;
+                    float tgt_x = Serial_cmd_structor.y;
+                    float tgt_y = Serial_cmd_structor.x;
                     Chassis.targetPos.yaw = -1.0f * Serial_cmd_structor.w;
 
-                    Chassis_Control(Chassis_Global, Chassis_Position, tgt_x, tgt_y, 0.0f, Vision_cmd_structor.yaw);
+                    Chassis_Control(Chassis_Global, Chassis_Position, tgt_x, tgt_y, 0.0f, -1.0f * Vision_cmd_structor.yaw);
 
                     amp[0] = limit_constrain_(M3508_speed_ctl(&m3508_data[Motor1_3508], Chassis.targetWheel.LB * RAD_S_TO_RPM));
                     amp[1] = limit_constrain_(M3508_speed_ctl(&m3508_data[Motor2_3508], Chassis.targetWheel.LF * RAD_S_TO_RPM));
@@ -202,7 +189,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
     if (hfdcan != &hfdcan1) return;
     while (HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO0, &hdr, d) == HAL_OK)
     {
-        if (hdr.IdType == FDCAN_EXTENDED_ID) return;
+        if (hdr.IdType == FDCAN_EXTENDED_ID) break;
         switch (hdr.Identifier)
         {
         // dji-m3508

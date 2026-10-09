@@ -7,7 +7,7 @@
  */
 #include "main.h"
 #include "chassis.h"
-
+#include "PID/pid.h"
 #include "motor_control.h"
 
 /*
@@ -43,6 +43,10 @@ Chassis_WheelType_t Chassis_IK_Body2Wheel(Chassis_Velocity_t* BodyVelocity);    
 Chassis_WheelType_t Chassis_IK_Global2Wheel(Chassis_Velocity_t* GlobalVelocity, float Yaw); // 逆运动学解算（世界坐标系）
 Chassis_WheelType_t Chassis_PositionControl_body(Chassis_Pos_t position);                   // 位置控制
 
+PID_Structor chassis_pos_vx;
+PID_Structor chassis_pos_vy;
+PID_Improve  chassis_pos_im ={};
+
 /**
  * 初始化底盘参数
  */
@@ -74,6 +78,9 @@ void Chassis_Init(void) {
     Chassis.targetVel.v_x = 0.0f;
     Chassis.targetVel.v_y = 0.0f;
     Chassis.targetVel.w = 0.0f;
+
+    PID_Init(&chassis_pos_vx,0.6f,0.0f,0.0f,2.0f,-2.0f,&chassis_pos_im);
+    PID_Init(&chassis_pos_vy,0.6f,0.0f,0.0f,2.0f,-2.0f,&chassis_pos_im);
 }
 
 /**
@@ -97,21 +104,27 @@ void Chassis_Control(Chassis_Frame_t frame, Chassis_Mode_t mode, float x, float 
 
         /* 位置模式 */
         case Chassis_Position: {
-            float err_x = x - Chassis.GlobalPos.x;
-            float err_y = y - Chassis.GlobalPos.y;
 
-            #define POS_P_FACT    0.6f   // 位置环比例
-            #define MAX_VEL_LIMIT 1.0f  // 限幅
+            chassis_pos_vx.Tar = x;
+            chassis_pos_vx.Act = Chassis.GlobalPos.x;
+            chassis_pos_vy.Tar = y;
+            chassis_pos_vy.Act = Chassis.GlobalPos.y;
 
-                // float POS_P_FACT = Serial_cmd_structor.kt;
+            PID_Controllor(&chassis_pos_vx);
+            Chassis.targetVel.v_x =  chassis_pos_vx.Out;
+            PID_Controllor(&chassis_pos_vy);
+            Chassis.targetVel.v_y =  chassis_pos_vy.Out;
 
-            Chassis.targetVel.v_x = err_x * POS_P_FACT;
-            Chassis.targetVel.v_y = err_y * POS_P_FACT;
-
-            if (Chassis.targetVel.v_x > MAX_VEL_LIMIT)  Chassis.targetVel.v_x = MAX_VEL_LIMIT;
-            if (Chassis.targetVel.v_x < -MAX_VEL_LIMIT) Chassis.targetVel.v_x = -MAX_VEL_LIMIT;
-            if (Chassis.targetVel.v_y > MAX_VEL_LIMIT)  Chassis.targetVel.v_y = MAX_VEL_LIMIT;
-            if (Chassis.targetVel.v_y < -MAX_VEL_LIMIT) Chassis.targetVel.v_y = -MAX_VEL_LIMIT;
+            // float err_x = x - Chassis.GlobalPos.x;
+            // float err_y = y - Chassis.GlobalPos.y;
+            // #define POS_P_FACT    0.6f   // 位置环比例
+            // #define MAX_VEL_LIMIT 1.0f  // 限幅
+            // Chassis.targetVel.v_x = err_x * POS_P_FACT;
+            // Chassis.targetVel.v_y = err_y * POS_P_FACT;
+            // if (Chassis.targetVel.v_x > MAX_VEL_LIMIT)  Chassis.targetVel.v_x = MAX_VEL_LIMIT;
+            // if (Chassis.targetVel.v_x < -MAX_VEL_LIMIT) Chassis.targetVel.v_x = -MAX_VEL_LIMIT;
+            // if (Chassis.targetVel.v_y > MAX_VEL_LIMIT)  Chassis.targetVel.v_y = MAX_VEL_LIMIT;
+            // if (Chassis.targetVel.v_y < -MAX_VEL_LIMIT) Chassis.targetVel.v_y = -MAX_VEL_LIMIT;
             // uart_printf("%f, %f\r\n", Chassis.targetVel.v_x, Chassis.targetVel.v_y);
         }
         break;

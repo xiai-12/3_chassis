@@ -3,7 +3,7 @@
 
 // pid结构体初始化
 void PID_Init(PID_Structor* pid_struct,float kp,float ki,float kd,float outmax,float outmin,PID_Improve* pid_im){
-    pid_struct->Tar= pid_struct->Act = pid_struct->Out = pid_struct->Act_last = pid_struct->Deriv =0;
+    pid_struct->Tar= pid_struct->Act = pid_struct->Out = pid_struct->Out_last =pid_struct->Act_last = pid_struct->Deriv =0;
     pid_struct->Error_now = pid_struct->Error_last = pid_struct->ErrorInt =0;
     pid_struct->kp = kp;
     pid_struct->ki = ki;

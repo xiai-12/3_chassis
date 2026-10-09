@@ -41,9 +41,12 @@ typedef struct Serial_CMD_Struct
     float location_tar;                  // 目标位置
     float angle;                         // 角度
     float kt;                            // 前馈系数
-    float vx;                            // x速度
-    float vy;                            // y速度
+    float x;                             // x
+    float y;                             // y
     float w;                             // 角速度
+    float kp;
+    float ki;
+    float kd;
 }Serial_CMD;
 
 
@@ -63,10 +66,9 @@ typedef struct Vision_CMD_Structor
 extern Serial_CMD Serial_cmd_structor;
 extern Vision_CMD Vision_cmd_structor;
 
-extern  Chassis_WheelType_t m3508_vel_act;
-extern  Chassis_WheelType_t m3508_pos_act;
-extern  Chassis_Velocity_t chassis_velocity;
-extern  Chassis_Velocity_t chassis_position;
+// 底盘位置模式位置环
+extern  PID_Structor chassis_pos_vx;
+extern  PID_Structor chassis_pos_vy;
 
 void Parse_serial_line(char *cmd);
 void Motor_Reset(void);

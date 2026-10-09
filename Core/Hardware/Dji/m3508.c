@@ -133,7 +133,7 @@ HAL_StatusTypeDef M3508_SendData(const FDCAN_TxHeaderTypeDef* can_tx_header,int1
 void  m3508_motor_callback(FDCAN_RxHeaderTypeDef* hdr,M3508_t* motor,uint8_t* hdr_data)
 {
     motor->rx_header = *hdr;
-    motor->rx_data_ptr = hdr_data;
+    //motor->rx_data_ptr = hdr_data;
     motor->angle = (uint16_t)((hdr_data[0] << 8) | hdr_data[1]);
     motor->speed = (int16_t)((hdr_data[2] << 8) | hdr_data[3]);
     motor->amp   = (int16_t)((hdr_data[4] << 8) | hdr_data[5]);
