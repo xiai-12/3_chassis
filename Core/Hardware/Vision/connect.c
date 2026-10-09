@@ -5,6 +5,7 @@
 
 Vision_Lia_raw vision_lia_raw={0};
 
+Vision_Lia_raw_pos vision_lia_raw_pos={0};
 /*
  * 共11个字节
  * data                           explain
@@ -27,7 +28,15 @@ void Visual_Receive(const uint8_t *data) {
     vision_lia_raw.tail = data[10];
 }
 
-
+// 14 byte
+void Visual_Receice_pos(const uint8_t *data)
+{
+    vision_lia_raw_pos.header1 = data[0];
+    vision_lia_raw_pos.pos_x = (int32_t)(data[1]<<24 | data[2]<<16 | data[3]<<8 | data[4]);
+    vision_lia_raw_pos.pos_y = (int32_t)(data[5]<<24 | data[6]<<16 | data[7]<<8 | data[8]);
+    vision_lia_raw_pos.yaw = (int32_t)(data[9]<<24 | data[10]<<16 | data[11]<<8 | data[12]);
+    vision_lia_raw_pos.tail = data[13];
+}
 
 
 

@@ -8,6 +8,8 @@
 #include "main.h"
 #include "chassis.h"
 
+#include "motor_control.h"
+
 /*
  *        布局示意图：
  *                       ↑ X (前进方向)
@@ -22,10 +24,17 @@
  *  9.26 规定的是 电机逆时针旋转方向为正
  *
  *  实际：
- *     id4      id1
+ *
+ *     id2     id3
  *
  *
- *     id3      id2
+ *     id1     id4
+ *                   y
+ *                  ^
+ *                  |
+ *                  |
+ *             x <————
+ *
  */
 
 Chassis_t Chassis;
@@ -91,8 +100,10 @@ void Chassis_Control(Chassis_Frame_t frame, Chassis_Mode_t mode, float x, float 
             float err_x = x - Chassis.GlobalPos.x;
             float err_y = y - Chassis.GlobalPos.y;
 
-            #define POS_P_FACT    0.05f   // 位置环比例
-            #define MAX_VEL_LIMIT 10.0f // 限幅
+            #define POS_P_FACT    0.6f   // 位置环比例
+            #define MAX_VEL_LIMIT 1.0f  // 限幅
+
+                // float POS_P_FACT = Serial_cmd_structor.kt;
 
             Chassis.targetVel.v_x = err_x * POS_P_FACT;
             Chassis.targetVel.v_y = err_y * POS_P_FACT;
@@ -125,11 +136,11 @@ void Chassis_Control(Chassis_Frame_t frame, Chassis_Mode_t mode, float x, float 
         if (yaw_err >  M_PI)  yaw_err -= 2.0f * (float)M_PI;
         else if (yaw_err < -M_PI) yaw_err += 2.0f * (float)M_PI;
 
-        float CHASSIS_W_P = 35.0f;
-        Chassis.targetVel.w = yaw_err * CHASSIS_W_P * (-1.0f);
+        float CHASSIS_W_P = 0.2f;
+        Chassis.targetVel.w = yaw_err * CHASSIS_W_P;
 
-        if (Chassis.targetVel.w > 8.0f)   Chassis.targetVel.w = 8.0f;
-        if (Chassis.targetVel.w < -8.0f)  Chassis.targetVel.w = -8.0f;
+        if (Chassis.targetVel.w > 3.0f)   Chassis.targetVel.w = 3.0f;
+        if (Chassis.targetVel.w < -3.0f)  Chassis.targetVel.w = -3.0f;
     }
 
     if (frame == Chassis_Global || mode == Chassis_Position) {

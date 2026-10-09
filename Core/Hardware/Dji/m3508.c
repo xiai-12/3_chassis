@@ -30,7 +30,8 @@ PID_Improve speed_im = {
     .integral_limit = 1,.integral_limit_val = 50000,
     .variable_integal = 0,.variable_integal_k = 0.003f,
     .deriv_on_meas = 1,
-    .deriv_filter = 1, .deriv_filter_alpha = 0.8f
+    .deriv_filter = 1, .deriv_filter_alpha = 0.8f,
+    .out_dead_zone = 1, .out_dead_zone_val = 30.0f
 };
 
 /*

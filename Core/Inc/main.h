@@ -38,8 +38,6 @@ extern "C" {
 /* USER CODE BEGIN ET */
 extern FDCAN_TxHeaderTypeDef tx_header;
 extern FDCAN_TxHeaderTypeDef damiao_tx_header;
-extern osMessageQueueId_t SerialRxQueueHandle;
-extern osMessageQueueId_t VisionRxQueueHandle;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/

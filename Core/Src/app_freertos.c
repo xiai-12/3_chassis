@@ -82,16 +82,6 @@ const osThreadAttr_t VisionCmdTask_attributes = {
   .priority = (osPriority_t) osPriorityAboveNormal7,
   .stack_size = 512 * 4
 };
-/* Definitions for SerialRxQueue */
-osMessageQueueId_t SerialRxQueueHandle;
-const osMessageQueueAttr_t SerialRxQueue_attributes = {
-  .name = "SerialRxQueue"
-};
-/* Definitions for VisionRxQueue */
-osMessageQueueId_t VisionRxQueueHandle;
-const osMessageQueueAttr_t VisionRxQueue_attributes = {
-  .name = "VisionRxQueue"
-};
 /* Definitions for NrfIrqSem */
 osSemaphoreId_t NrfIrqSemHandle;
 const osSemaphoreAttr_t NrfIrqSem_attributes = {
@@ -136,13 +126,6 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
-
-  /* Create the queue(s) */
-  /* creation of SerialRxQueue */
-  SerialRxQueueHandle = osMessageQueueNew (64, sizeof(uint8_t), &SerialRxQueue_attributes);
-
-  /* creation of VisionRxQueue */
-  VisionRxQueueHandle = osMessageQueueNew (32, sizeof(uint8_t), &VisionRxQueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */

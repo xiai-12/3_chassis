@@ -13,7 +13,7 @@
 #include "Key/key.h"
 #include "Chassis/chassis.h"
 #include "nrf_cmd.h"
-
+#include "Filter/filter.h"
 
 
 // 电机运动模式选择
@@ -53,6 +53,10 @@ typedef struct Vision_CMD_Structor
     float vx;
     float vy;
     float w;
+
+    float pos_x;
+    float pos_y;
+    float yaw;
 }Vision_CMD;
 
 // pid结构体可外部引用

@@ -29,14 +29,22 @@ typedef struct
     int16_t w;
     uint8_t crc;
     uint8_t tail;
-    //
-    int16_t angle;
-    int16_t distance;
 }Vision_Lia_raw;
 
 
+typedef struct
+{
+    uint8_t header1;
+    int32_t pos_x;
+    int32_t pos_y;
+    int32_t yaw;
+    uint8_t tail;
+}Vision_Lia_raw_pos;
+
 extern Vision_Lia_raw vision_lia_raw;
+extern Vision_Lia_raw_pos vision_lia_raw_pos;
 
 void Visual_Receive(const uint8_t *data);
+void Visual_Receice_pos(const uint8_t *data);
 
 #endif //INC_3_CHASSIS_CONNECT_H

@@ -53,6 +53,8 @@ add_executable(${CMAKE_PROJECT_NAME}
         Core/Hardware/Vision/connect.c
         Core/Hardware/Vision/connect.h
         Core/Application/src/serial_cmd.c
+        Core/Hardware/Filter/filter.c
+        Core/Hardware/Filter/filter.h
 )
 
 # print float
