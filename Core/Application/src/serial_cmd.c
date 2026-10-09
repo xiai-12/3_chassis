@@ -19,10 +19,10 @@ volatile uint16_t vision_len  = 0;
 static float Parse_float(char *cmd,uint8_t index); // 串口浮点数解析函数，index为浮点数第一位的索引
 static void Radar_Filter(float rx, float ry, float ryaw,float* val);
 
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 雷达数据滤波
 #define Filter_alpha   0.8f
-static float last_rx, last_ry,last_yaw;
+static float last_rx, last_ry,last_yaw = 0.0f;
 // static float radar_data[3][5] = {0};// 3个数据通道队列
 // static uint8_t count=0;
 static void Radar_Filter(float rx, float ry, float ryaw,float* val)
@@ -86,6 +86,7 @@ void StartSerialCmdTask(void *argument)
 void StartVisionCmdTask(void *argument)
 {
     /* USER CODE BEGIN StartVisionCmdTask */
+    memset(vision_line,0,sizeof(vision_line));
     // 使用Ex函数，接收不定长数据
     HAL_UARTEx_ReceiveToIdle_DMA(&huart2, vision_line,sizeof(vision_line));
     // 关闭DMA传输过半中断（HAL库默认开启，但我们只需要接收完成中断）
@@ -98,7 +99,7 @@ void StartVisionCmdTask(void *argument)
         {
             vision_flag = 0;
             Parse_vision_line(vision_line);
-            memset(vision_line,0,sizeof(vision_line));
+            //memset(vision_line,0,sizeof(vision_line));
         }
         osDelay(5);
     }
@@ -166,7 +167,7 @@ static  float Parse_float(char *cmd,uint8_t index)
 // 命令解析函数，用于解析上位机上送发来的命令
 void Parse_serial_line(char *cmd)
 {
-    uint8_t mode;
+    uint8_t mode = 0;
 
     // mode debug_mode x y  w speed_tar location_tar angle
     switch (cmd[0])
@@ -242,6 +243,22 @@ void Parse_serial_line(char *cmd)
                 pid_ptr = &chassis_pos_vx;
                 break;
             case MODE_3:
+                if (Serial_cmd_structor.angle == 0)
+                {
+                    pid_ptr = &(m3508_data[Motor1_3508].speed_pid);
+                }
+                else if (Serial_cmd_structor.angle == 90)
+                {
+                    pid_ptr = &(m3508_data[Motor2_3508].speed_pid);
+                }
+                else if (Serial_cmd_structor.angle == 180)
+                {
+                    pid_ptr = &(m3508_data[Motor3_3508].speed_pid);
+                }
+                else
+                {
+                    pid_ptr = &(m3508_data[Motor4_3508].speed_pid);
+                }
                 break;
             default:
                 break;
@@ -283,12 +300,12 @@ void Parse_serial_line(char *cmd)
             //     m3508_data[i].speed_pid.ki = pid_ptr->ki;
             //     m3508_data[i].speed_pid.kd = pid_ptr->kd;
             // }
+            PID_ModifyParams(&chassis_pos_vy,Serial_cmd_structor.kp,Serial_cmd_structor.ki,Serial_cmd_structor.kd);
             SERIAL_printf("kp:%3f ki:%3f kd:%3f kt:%3f\r\n",pid_ptr->kp,pid_ptr->ki,pid_ptr->kd,Serial_cmd_structor.kt);
         }
         return;
     }
 }
-
 
 //视觉串口解析函数
 void Parse_vision_line(uint8_t* cmd)
@@ -321,23 +338,24 @@ void Parse_vision_line(uint8_t* cmd)
         if (vision_len == 14 && cmd[13] == 0x21)
         {
             Visual_Receice_pos(cmd);
-           //  Vision_cmd_structor.pos_x = 0.80f * (float)vision_lia_raw_pos.pos_x / pos_scale_rate + 0.20f * Vision_cmd_structor.pos_x;
-           //  Vision_cmd_structor.pos_y = 0.80f * (float)vision_lia_raw_pos.pos_y / pos_scale_rate + 0.20f * Vision_cmd_structor.pos_y;
-           //  Vision_cmd_structor.yaw   = 0.80f * (float)vision_lia_raw_pos.yaw   / pos_scale_rate  + 0.20f * Vision_cmd_structor.yaw;
-            float rx   = (float)vision_lia_raw_pos.pos_x / pos_scale_rate;
-            float ry   = (float)vision_lia_raw_pos.pos_y / pos_scale_rate;
-            float ryaw = (float)vision_lia_raw_pos.yaw   / pos_scale_rate;
+           Vision_cmd_structor.pos_x = 0.80f * (float)vision_lia_raw_pos.pos_x / pos_scale_rate + 0.20f * Vision_cmd_structor.pos_x;
+           Vision_cmd_structor.pos_y = 0.80f * (float)vision_lia_raw_pos.pos_y / pos_scale_rate + 0.20f * Vision_cmd_structor.pos_y;
+           Vision_cmd_structor.yaw   = 0.80f * (float)vision_lia_raw_pos.yaw   / pos_scale_rate  + 0.20f * Vision_cmd_structor.yaw;
 
-            float val[3];
-            Radar_Filter( rx, ry, ryaw,val);
 
-            Vision_cmd_structor.pos_x = val[0];
-            Vision_cmd_structor.pos_y = val[1];
-            Vision_cmd_structor.yaw   = val[2];
+            // float rx   = (float)vision_lia_raw_pos.pos_x / pos_scale_rate;
+            // float ry   = (float)vision_lia_raw_pos.pos_y / pos_scale_rate;
+            // float ryaw = (float)vision_lia_raw_pos.yaw   / pos_scale_rate;
+            //
+            // float val[3];
+            // Radar_Filter( rx, ry, ryaw,val);
+            //
+            // Vision_cmd_structor.pos_x = val[0];
+            // Vision_cmd_structor.pos_y = val[1];
+            // Vision_cmd_structor.yaw   = val[2];
             if (count >= 5)
             {
-                SERIAL_printf("%f,%f,%f,%f,%f\r\n",Vision_cmd_structor.pos_x,Vision_cmd_structor.pos_y,Vision_cmd_structor.yaw,
-                    m3508_data[Motor2_3508].speed_pid.Tar,m3508_data[Motor2_3508].speed_pid.Act);
+                SERIAL_printf("%f,%f,%f,%f,%f\r\n",Vision_cmd_structor.pos_x,Vision_cmd_structor.pos_y,Vision_cmd_structor.yaw,Chassis.targetVel.v_x, Chassis.targetVel.v_y);
                 count =0;
             }
             count ++;
@@ -387,12 +405,16 @@ void StartSerialTxTask(void *argument)
 
                 break;
             case MODE_3:
+                SERIAL_printf("%f,%f,%f,%f,%f,%f,%f,%f\r\n",m3508_data[Motor1_3508].speed_pid.Tar,m3508_data[Motor1_3508].speed_pid.Act,
+                                    m3508_data[Motor2_3508].speed_pid.Tar,m3508_data[Motor2_3508].speed_pid.Act,
+                                    m3508_data[Motor3_3508].speed_pid.Tar,m3508_data[Motor3_3508].speed_pid.Act,
+                                    m3508_data[Motor4_3508].speed_pid.Tar,m3508_data[Motor4_3508].speed_pid.Act);
                 break;
             default:
                 break;
             }
         }
-        osDelay(100);
+        osDelay(50);
     }
     /* USER CODE END StartSerialTXTask */
 }

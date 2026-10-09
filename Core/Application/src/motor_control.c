@@ -31,6 +31,7 @@ void StartMotorCtlTask(void *argument)
     Chassis_Init();
 
     static float vx,vy,w;
+    static float vx3,vy3,w3;
     static uint8_t stop_flag = 0;
     static uint16_t btn_last = 0;
     /* Infinite loop */
@@ -82,10 +83,10 @@ void StartMotorCtlTask(void *argument)
                     amp[2] =  limit_constrain_(M3508_speed_ctl(&m3508_data[Motor3_3508],Chassis.targetWheel.RF * RAD_S_TO_RPM));
                     amp[3] =  limit_constrain_(M3508_speed_ctl(&m3508_data[Motor4_3508],Chassis.targetWheel.RB * RAD_S_TO_RPM));
                     M3508_SendData(&m3508_tx_header,amp);
+
                     break;
                 case MODE_2:
                 {
-
                     Chassis.GlobalPos.x   = Vision_cmd_structor.pos_y;
                     Chassis.GlobalPos.y   = Vision_cmd_structor.pos_x;
                     Chassis.GlobalPos.yaw = Vision_cmd_structor.yaw;
@@ -96,14 +97,15 @@ void StartMotorCtlTask(void *argument)
 
                     Chassis_Control(Chassis_Global, Chassis_Position, tgt_x, tgt_y, 0.0f, -1.0f * Vision_cmd_structor.yaw);
 
-                    amp[0] = limit_constrain_(M3508_speed_ctl(&m3508_data[Motor1_3508], Chassis.targetWheel.LB * RAD_S_TO_RPM));
-                    amp[1] = limit_constrain_(M3508_speed_ctl(&m3508_data[Motor2_3508], Chassis.targetWheel.LF * RAD_S_TO_RPM));
-                    amp[2] = limit_constrain_(M3508_speed_ctl(&m3508_data[Motor3_3508], Chassis.targetWheel.RF * RAD_S_TO_RPM));
-                    amp[3] = limit_constrain_(M3508_speed_ctl(&m3508_data[Motor4_3508], Chassis.targetWheel.RB * RAD_S_TO_RPM));
+                    amp[0] = M3508_speed_ctl(&m3508_data[Motor1_3508], Chassis.targetWheel.LB * RAD_S_TO_RPM);
+                    amp[1] = M3508_speed_ctl(&m3508_data[Motor2_3508], Chassis.targetWheel.LF * RAD_S_TO_RPM);
+                    amp[2] = M3508_speed_ctl(&m3508_data[Motor3_3508], Chassis.targetWheel.RF * RAD_S_TO_RPM);
+                    amp[3] = M3508_speed_ctl(&m3508_data[Motor4_3508], Chassis.targetWheel.RB * RAD_S_TO_RPM);
                     M3508_SendData(&m3508_tx_header, amp);
+
                     break;
                 }
-
+                /*
                 // case MODE_2:
                 //     // ° -> rad   * 2*M_PI/360 = 0.01745329252f
                 //     // angle = Serial_cmd_structor.angle * 0.01745329252f;
@@ -154,7 +156,22 @@ void StartMotorCtlTask(void *argument)
                 //     amp[3] =  limit_constrain_(M3508_speed_ctl(&m3508_data[Motor4_3508],Chassis.targetWheel.RB * RAD_S_TO_RPM) + tt_f[3]);
                 //     M3508_SendData(&m3508_tx_header,amp);
                 //     break;
+
                 case MODE_3:
+                    float vx_3 = (nrf_chassis_cmd.link != 0) ? nrf_chassis_cmd.vx : Serial_cmd_structor.x;
+                    vx3 = 0.80f * vx_3 + 0.20f * vx3;
+                    float vy_3 = (nrf_chassis_cmd.link != 0) ? nrf_chassis_cmd.vy : Serial_cmd_structor.y;
+                    vy3 = 0.80f * vy_3 + 0.20f * vy3;
+                    float w_3 = (nrf_chassis_cmd.link != 0) ? nrf_chassis_cmd.w : Serial_cmd_structor.w;
+                    w3 = 0.80f * w_3 + 0.20f * w3;
+                    Chassis_Control(Chassis_Body,Chassis_Speed,vx3,vy3,w3,0);
+
+                    amp[0] =  M3508_speed_ctl(&m3508_data[Motor1_3508],Chassis.targetWheel.LB * RAD_S_TO_RPM);
+                    amp[1] =  M3508_speed_ctl(&m3508_data[Motor2_3508],Chassis.targetWheel.LF * RAD_S_TO_RPM);
+                    amp[2] =  M3508_speed_ctl(&m3508_data[Motor3_3508],Chassis.targetWheel.RF * RAD_S_TO_RPM);
+                    amp[3] =  M3508_speed_ctl(&m3508_data[Motor4_3508],Chassis.targetWheel.RB * RAD_S_TO_RPM);
+                    M3508_SendData(&m3508_tx_header,amp);
+
                     break;
                 default:
                     break;
@@ -163,6 +180,7 @@ void StartMotorCtlTask(void *argument)
         else
         {
             vx = vy = w = 0;
+            Chassis.targetVel.v_x = Chassis.targetVel.v_y = Chassis.targetVel.w = 0.0f;
             M3508_SendData(&m3508_tx_header,amp_zero);
         }
 
@@ -189,7 +207,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
     if (hfdcan != &hfdcan1) return;
     while (HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO0, &hdr, d) == HAL_OK)
     {
-        if (hdr.IdType == FDCAN_EXTENDED_ID) break;
+        if (hdr.IdType == FDCAN_EXTENDED_ID) return;
         switch (hdr.Identifier)
         {
         // dji-m3508

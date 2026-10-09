@@ -45,7 +45,11 @@ Chassis_WheelType_t Chassis_PositionControl_body(Chassis_Pos_t position);       
 
 PID_Structor chassis_pos_vx;
 PID_Structor chassis_pos_vy;
-PID_Improve  chassis_pos_im ={};
+PID_Improve  chassis_pos_im={
+    .out_dead_zone = 1, .out_dead_zone_val = 0.02f,
+    .deriv_on_meas = 1, .deriv_filter = 1, .deriv_filter_alpha =  0.80f,
+    .integral_limit = 1, .integral_limit_val = 5.0f
+};
 
 /**
  * 初始化底盘参数
@@ -79,8 +83,8 @@ void Chassis_Init(void) {
     Chassis.targetVel.v_y = 0.0f;
     Chassis.targetVel.w = 0.0f;
 
-    PID_Init(&chassis_pos_vx,0.6f,0.0f,0.0f,2.0f,-2.0f,&chassis_pos_im);
-    PID_Init(&chassis_pos_vy,0.6f,0.0f,0.0f,2.0f,-2.0f,&chassis_pos_im);
+    PID_Init(&chassis_pos_vx,0.6f,0.0f,0.0f,1.0f,-1.0f,&chassis_pos_im);
+    PID_Init(&chassis_pos_vy,0.6f,0.0f,0.0f,1.0f,-1.0f,&chassis_pos_im);
 }
 
 /**
@@ -117,7 +121,7 @@ void Chassis_Control(Chassis_Frame_t frame, Chassis_Mode_t mode, float x, float 
 
             // float err_x = x - Chassis.GlobalPos.x;
             // float err_y = y - Chassis.GlobalPos.y;
-            // #define POS_P_FACT    0.6f   // 位置环比例
+            // #define POS_P_FACT    0.2f   // 位置环比例
             // #define MAX_VEL_LIMIT 1.0f  // 限幅
             // Chassis.targetVel.v_x = err_x * POS_P_FACT;
             // Chassis.targetVel.v_y = err_y * POS_P_FACT;
@@ -125,7 +129,6 @@ void Chassis_Control(Chassis_Frame_t frame, Chassis_Mode_t mode, float x, float 
             // if (Chassis.targetVel.v_x < -MAX_VEL_LIMIT) Chassis.targetVel.v_x = -MAX_VEL_LIMIT;
             // if (Chassis.targetVel.v_y > MAX_VEL_LIMIT)  Chassis.targetVel.v_y = MAX_VEL_LIMIT;
             // if (Chassis.targetVel.v_y < -MAX_VEL_LIMIT) Chassis.targetVel.v_y = -MAX_VEL_LIMIT;
-            // uart_printf("%f, %f\r\n", Chassis.targetVel.v_x, Chassis.targetVel.v_y);
         }
         break;
 
