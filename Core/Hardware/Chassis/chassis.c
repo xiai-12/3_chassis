@@ -46,7 +46,6 @@ Chassis_WheelType_t Chassis_PositionControl_body(Chassis_Pos_t position);       
 PID_Structor chassis_pos_vx;
 PID_Structor chassis_pos_vy;
 PID_Improve  chassis_pos_im={
-    .out_dead_zone = 1, .out_dead_zone_val = 0.02f,
     .deriv_on_meas = 1, .deriv_filter = 1, .deriv_filter_alpha =  0.80f,
     .integral_limit = 1, .integral_limit_val = 5.0f
 };
@@ -108,16 +107,15 @@ void Chassis_Control(Chassis_Frame_t frame, Chassis_Mode_t mode, float x, float 
 
         /* 位置模式 */
         case Chassis_Position: {
-
             chassis_pos_vx.Tar = x;
             chassis_pos_vx.Act = Chassis.GlobalPos.x;
             chassis_pos_vy.Tar = y;
             chassis_pos_vy.Act = Chassis.GlobalPos.y;
-
             PID_Controllor(&chassis_pos_vx);
             Chassis.targetVel.v_x =  chassis_pos_vx.Out;
             PID_Controllor(&chassis_pos_vy);
             Chassis.targetVel.v_y =  chassis_pos_vy.Out;
+
 
             // float err_x = x - Chassis.GlobalPos.x;
             // float err_y = y - Chassis.GlobalPos.y;

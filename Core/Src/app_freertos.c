@@ -82,6 +82,13 @@ const osThreadAttr_t VisionCmdTask_attributes = {
   .priority = (osPriority_t) osPriorityAboveNormal7,
   .stack_size = 512 * 4
 };
+/* Definitions for LocCmdTask */
+osThreadId_t LocCmdTaskHandle;
+const osThreadAttr_t LocCmdTask_attributes = {
+  .name = "LocCmdTask",
+  .priority = (osPriority_t) osPriorityAboveNormal,
+  .stack_size = 512 * 4
+};
 /* Definitions for NrfIrqSem */
 osSemaphoreId_t NrfIrqSemHandle;
 const osSemaphoreAttr_t NrfIrqSem_attributes = {
@@ -98,6 +105,7 @@ void StartMotorCtlTask(void *argument);
 void StartSerialCmdTask(void *argument);
 void StartNrfCmdTask(void *argument);
 void StartVisionCmdTask(void *argument);
+void StartLocCmdTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -146,6 +154,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of VisionCmdTask */
   VisionCmdTaskHandle = osThreadNew(StartVisionCmdTask, NULL, &VisionCmdTask_attributes);
+
+  /* creation of LocCmdTask */
+  LocCmdTaskHandle = osThreadNew(StartLocCmdTask, NULL, &LocCmdTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -245,6 +256,24 @@ __weak void StartVisionCmdTask(void *argument)
     osDelay(1);
   }
   /* USER CODE END StartVisionCmdTask */
+}
+
+/* USER CODE BEGIN Header_StartLocCmdTask */
+/**
+* @brief Function implementing the LocCmdTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartLocCmdTask */
+__weak void StartLocCmdTask(void *argument)
+{
+  /* USER CODE BEGIN StartLocCmdTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartLocCmdTask */
 }
 
 /* Private application code --------------------------------------------------*/

@@ -14,6 +14,7 @@
 #include "Chassis/chassis.h"
 #include "nrf_cmd.h"
 #include "Filter/filter.h"
+#include "Chassis/chassis.h"
 
 
 // 电机运动模式选择
@@ -62,9 +63,22 @@ typedef struct Vision_CMD_Structor
     float yaw;
 }Vision_CMD;
 
+// 码盘+imu数据接收体
+typedef struct Encoder_imu_Structor
+{
+    float x_count;
+    float y_count;
+    float x_turns;
+    float y_turns;
+    float x_distance;
+    float y_distance;
+    float yaw;
+}Encoder_imu_CMD;
+
 // pid结构体可外部引用
 extern Serial_CMD Serial_cmd_structor;
 extern Vision_CMD Vision_cmd_structor;
+extern Encoder_imu_CMD Encoder_imu_cmd_structor;
 
 // 底盘位置模式位置环
 extern  PID_Structor chassis_pos_vx;
@@ -73,5 +87,6 @@ extern  PID_Structor chassis_pos_vy;
 void Parse_serial_line(char *cmd);
 void Motor_Reset(void);
 void Parse_vision_line(uint8_t* cmd);
+void Parse_location_line(uint8_t* cmd);
 
 #endif //ROBOCON_TEST_MOTOR_CONTROL_H
