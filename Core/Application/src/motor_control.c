@@ -24,11 +24,17 @@ void StartMotorCtlTask(void *argument)
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xPeriod = pdMS_TO_TICKS(5);
 
+    WS2812_Init();
     M3508_Init();
     Chassis_Init();
 
+    for (uint8_t i=0; i<15; i++)
+    {
+        WS2812_SetLED(i,255,255,255);
+    }
+    WS2812_Show();
+
     Chassis_WheelType_t m3508_pos_act;
-    float angle = 0.0f;
 
     static float vx,vy,w;
     static float vx3,vy3,w3;
@@ -71,10 +77,10 @@ void StartMotorCtlTask(void *argument)
                     float vx_1 = Vision_cmd_structor.vx;
                     vx = 0.80f * vx_1 + 0.20f * vx;
                     //float vy_1 = (nrf_chassis_cmd.link != 0) ? nrf_chassis_cmd.vy : Serial_cmd_structor.vy;
-                    float vy_1 = Vision_cmd_structor.vx;
+                    float vy_1 = Vision_cmd_structor.vy;
                     vy = 0.80f * vy_1 + 0.20f * vy;
                     //float w_1 = (nrf_chassis_cmd.link != 0) ? nrf_chassis_cmd.w : Serial_cmd_structor.w;
-                    float w_1 = Vision_cmd_structor.vx;
+                    float w_1 = Vision_cmd_structor.w;
                     w = 0.80f * w_1 + 0.20f * w;
                     Chassis_Control(Chassis_Body,Chassis_Speed,vx,vy,w,0);
 

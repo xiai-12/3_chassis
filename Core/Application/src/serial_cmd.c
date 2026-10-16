@@ -65,7 +65,6 @@ void StartSerialCmdTask(void *argument)
         {
             serial_flag = 0;
             Parse_serial_line((char *)serial_line);
-            memset(serial_line,0,sizeof(serial_line));
         }
         osDelay(5);
     }
@@ -91,7 +90,6 @@ void StartVisionCmdTask(void *argument)
         {
             vision_flag = 0;
             Parse_vision_line(vision_line);
-            memset(vision_line,0,sizeof(vision_line));
         }
         osDelay(5);
     }
@@ -117,7 +115,6 @@ void StartLocCmdTask(void *argument)
         {
             location_flag = 0;
             Parse_location_line(location_line);
-            memset(location_line,0,sizeof(location_line));
         }
         osDelay(5);
     }
@@ -332,7 +329,7 @@ void Parse_serial_line(char *cmd)
 }
 
 //视觉串口解析函数
-void Parse_vision_line(uint8_t* cmd)
+void Parse_vision_line(const uint8_t* cmd)
 {
     // 换算倍率
     static float v_scale_rate = 1000.0f;
@@ -343,8 +340,6 @@ void Parse_vision_line(uint8_t* cmd)
     {
         crc_check ^= cmd[i];
     }
-
-    static uint8_t count = 0;
 
     switch (cmd[0])
     {
@@ -386,13 +381,13 @@ void Parse_vision_line(uint8_t* cmd)
 }
 
 //码盘+imu解析函数
-void Parse_location_line(uint8_t* cmd)
+void Parse_location_line(const uint8_t* cmd)
 {
-    uint8_t rx_buf[28];
-    float rx_data[7];
-    if (cmd[0] == '[' && cmd[1] == '7' && location_len == 32)
+    uint8_t rx_buf[32];
+    float rx_data[8];
+    if (cmd[0] == '[' && cmd[1] == '8' && location_len == 36)
     {
-        for (uint8_t i = 0; i < 28; i++)
+        for (uint8_t i = 0; i < 32; i++)
         {
             rx_buf[i] = cmd[i+2];
         }
@@ -404,6 +399,7 @@ void Parse_location_line(uint8_t* cmd)
         Encoder_imu_cmd_structor.x_distance = rx_data[4];
         Encoder_imu_cmd_structor.y_distance = rx_data[5];
         Encoder_imu_cmd_structor.yaw = rx_data[6];
+        Encoder_imu_cmd_structor.yaw_nor = rx_data[7];
     }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -417,8 +413,8 @@ void StartSerialTxTask(void *argument)
     for(;;)
     {
         //SERIAL_printf("%f,%f,%f,%f,%f\r\n",Vision_cmd_structor.pos_x,Vision_cmd_structor.pos_y,Vision_cmd_structor.yaw,Chassis.targetVel.v_x, Chassis.targetVel.v_y);
-        SERIAL_printf("%f,%f,%f,%f,%f,%f,%f\r\n",Encoder_imu_cmd_structor.x_count,Encoder_imu_cmd_structor.y_count,Encoder_imu_cmd_structor.x_turns,Encoder_imu_cmd_structor.y_turns,
-            Encoder_imu_cmd_structor.x_distance,Encoder_imu_cmd_structor.y_distance,Encoder_imu_cmd_structor.yaw);
+        SERIAL_printf("%f,%f,%f,%f,%f,%f,%f,%f\r\n",Encoder_imu_cmd_structor.x_count,Encoder_imu_cmd_structor.y_count,Encoder_imu_cmd_structor.x_turns,Encoder_imu_cmd_structor.y_turns,
+            Encoder_imu_cmd_structor.x_distance,Encoder_imu_cmd_structor.y_distance,Encoder_imu_cmd_structor.yaw,Encoder_imu_cmd_structor.yaw_nor);
         //SERIAL_printf("keys:%d,button:%d\r\n",nrf_chassis_cmd.keys,nrf_chassis_cmd.button);
         if ((Serial_cmd_structor.debug_mode == DEBUG_FALSE || nrf_chassis_cmd.keys == 4))
         {

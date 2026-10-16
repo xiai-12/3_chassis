@@ -15,6 +15,7 @@
 #include "nrf_cmd.h"
 #include "Filter/filter.h"
 #include "Chassis/chassis.h"
+#include "WS2812/ws2812.h"
 
 
 // 电机运动模式选择
@@ -73,6 +74,7 @@ typedef struct Encoder_imu_Structor
     float x_distance;
     float y_distance;
     float yaw;
+    float yaw_nor;
 }Encoder_imu_CMD;
 
 // pid结构体可外部引用
@@ -86,7 +88,7 @@ extern  PID_Structor chassis_pos_vy;
 
 void Parse_serial_line(char *cmd);
 void Motor_Reset(void);
-void Parse_vision_line(uint8_t* cmd);
-void Parse_location_line(uint8_t* cmd);
+void Parse_vision_line(const uint8_t* cmd);
+void Parse_location_line(const uint8_t* cmd);
 
 #endif //ROBOCON_TEST_MOTOR_CONTROL_H

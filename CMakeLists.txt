@@ -55,6 +55,8 @@ add_executable(${CMAKE_PROJECT_NAME}
         Core/Application/src/serial_cmd.c
         Core/Hardware/Filter/filter.c
         Core/Hardware/Filter/filter.h
+        Core/Hardware/WS2812/ws2812.c
+        Core/Hardware/WS2812/ws2812.h
 )
 
 # print float
