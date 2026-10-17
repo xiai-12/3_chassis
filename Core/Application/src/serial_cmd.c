@@ -26,16 +26,25 @@ static void Radar_Filter(float rx, float ry, float ryaw,float* val);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 雷达数据滤波
-#define Filter_alpha   0.8f
+Filter_MA_t x_mat,y_mat,yaw_mat;
+#define Filter_alpha   0.9f
+#define Radar_jump_max 0.04f
 static float last_rx, last_ry,last_yaw = 0.0f;
-
+static uint8_t radar_first = 1;              // 首帧标志
 static void Radar_Filter(float rx, float ry, float ryaw,float* val)
 {
-
-    // 跳变剔除
-    if (rx - last_rx > 0.04f || ry - last_ry > 0.04f)
+    if (radar_first)
+    {
+        radar_first = 0;
+        last_rx = rx; last_ry = ry; last_yaw = ryaw;
+        val[0] = rx; val[1] = ry; val[2] = ryaw;
+        return;
+    }
+    // 跳变剔除（正负方向都要判）
+    if (fabsf(rx - last_rx) > Radar_jump_max || fabsf(ry - last_ry) > Radar_jump_max)
     {
         val[0] = last_rx; val[1] = last_ry; val[2] = last_yaw;
+        last_rx = rx; last_ry = ry; last_yaw = ryaw;// 参考值必须更新，否则下一帧还是判跳变，永远卡住
         return;
     }
     // 低通滤波
@@ -45,6 +54,10 @@ static void Radar_Filter(float rx, float ry, float ryaw,float* val)
     if (yaw_err > M_PI)   yaw_err -= 2.0f * (float)M_PI;
     else if (yaw_err < -M_PI) yaw_err += 2.0f *(float) M_PI;
     val[2] = last_yaw + Filter_alpha * yaw_err;
+    // 滑动窗口滤波
+    // MAF_Filter(&x_mat,rx);
+    // MAF_Filter(&y_mat,rx);
+    // MAF_Filter(&yaw_mat,ryaw);
 
     last_rx = rx; last_ry = ry;last_yaw = ryaw;
 }
@@ -72,11 +85,13 @@ void StartSerialCmdTask(void *argument)
     /* USER CODE END StartVisionCmdTask */
 }
 
-
 // 视觉串口接收解析函数
 void StartVisionCmdTask(void *argument)
 {
     /* USER CODE BEGIN StartVisionCmdTask */
+    Filter_Init_MAF(&x_mat);
+    Filter_Init_MAF(&y_mat);
+    Filter_Init_MAF(&yaw_mat);
     memset(vision_line,0,sizeof(vision_line));
     // 使用Ex函数，接收不定长数据
     HAL_UARTEx_ReceiveToIdle_DMA(&huart2, vision_line,sizeof(vision_line));
@@ -89,14 +104,13 @@ void StartVisionCmdTask(void *argument)
         if (vision_flag)
         {
             vision_flag = 0;
-            Parse_vision_line(vision_line);
+            Parse_vision_line(vision_line, vision_len);
         }
         osDelay(5);
     }
 
     /* USER CODE END StartVisionCmdTask */
 }
-
 
 // 码盘+imu
 void StartLocCmdTask(void *argument)
@@ -329,11 +343,12 @@ void Parse_serial_line(char *cmd)
 }
 
 //视觉串口解析函数
-void Parse_vision_line(const uint8_t* cmd)
+void Parse_vision_line(const uint8_t* cmd, uint16_t len)
 {
     // 换算倍率
     static float v_scale_rate = 1000.0f;
     static float pos_scale_rate = 10000.0f;
+
     // crc校验
     uint8_t crc_check = 0;
     for (uint8_t i = 0; i < 9; i++)
@@ -357,16 +372,12 @@ void Parse_vision_line(const uint8_t* cmd)
         if (vision_len == 14 && cmd[13] == 0x21)
         {
             Visual_Receice_pos(cmd);
-            // Vision_cmd_structor.pos_x = 0.80f * (float)vision_lia_raw_pos.pos_x / pos_scale_rate + 0.20f * Vision_cmd_structor.pos_x;
-            // Vision_cmd_structor.pos_y = 0.80f * (float)vision_lia_raw_pos.pos_y / pos_scale_rate + 0.20f * Vision_cmd_structor.pos_y;
-            // Vision_cmd_structor.yaw   = 0.80f * (float)vision_lia_raw_pos.yaw   / pos_scale_rate  + 0.20f * Vision_cmd_structor.yaw;
             float rx   = (float)vision_lia_raw_pos.pos_x / pos_scale_rate;
             float ry   = (float)vision_lia_raw_pos.pos_y / pos_scale_rate;
             float ryaw = (float)vision_lia_raw_pos.yaw   / pos_scale_rate;
 
             float val[3];
             Radar_Filter( rx, ry, ryaw,val);
-
             Vision_cmd_structor.pos_x = val[0];
             Vision_cmd_structor.pos_y = val[1];
             Vision_cmd_structor.yaw   = val[2];
@@ -376,8 +387,6 @@ void Parse_vision_line(const uint8_t* cmd)
     default:
         break;
     }
-
-
 }
 
 //码盘+imu解析函数
@@ -429,16 +438,10 @@ void StartSerialTxTask(void *argument)
                                 m3508_data[Motor4_3508].speed_pid.Tar,m3508_data[Motor4_3508].speed_pid.Act);
                 break;
             case MODE_2:
-                // SERIAL_printf("%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n",Chassis.targetVel.v_x,Chassis.targetVel.v_y,Chassis.targetVel.w,
-                //                 TracePlane.vref,TracePlane.pos_act,TracePlane.pos_target,
-                //                 chassis_velocity.v_x,chassis_velocity.v_y,chassis_position.v_x,chassis_position.v_y,
-                //                 m3508_data[Motor1_3508].speed_pid.Tar,m3508_data[Motor1_3508].speed_pid.Act,
-                //                 m3508_data[Motor2_3508].speed_pid.Tar,m3508_data[Motor2_3508].speed_pid.Act,
-                //                 m3508_data[Motor3_3508].speed_pid.Tar,m3508_data[Motor3_3508].speed_pid.Act,
-                //                 m3508_data[Motor4_3508].speed_pid.Tar,m3508_data[Motor4_3508].speed_pid.Act);
 
                 SERIAL_printf("%f,%f,%f,%f,%f\r\n",Chassis.GlobalPos.x,Chassis.GlobalPos.y,Chassis.GlobalPos.yaw,m3508_data[Motor1_3508].speed_pid.Tar,m3508_data[Motor2_3508].speed_pid.Tar);
                 break;
+
             case MODE_3:
                 SERIAL_printf("%f,%f,%f,%f,%f,%f,%f,%f\r\n",m3508_data[Motor1_3508].speed_pid.Tar,m3508_data[Motor1_3508].speed_pid.Act,
                                     m3508_data[Motor2_3508].speed_pid.Tar,m3508_data[Motor2_3508].speed_pid.Act,
@@ -449,7 +452,7 @@ void StartSerialTxTask(void *argument)
                 break;
             }
         }
-        osDelay(100);
+        osDelay(30);
     }
     /* USER CODE END StartSerialTXTask */
 }

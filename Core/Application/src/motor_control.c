@@ -1,10 +1,6 @@
 #include "motor_control.h"
 #include "motion_plane.h"
 
-static int16_t limit_constrain_(int32_t amp)
-{
-    return (int16_t)(amp>15000?15000:(amp<-15000?-15000:amp));
-}
 // 串口解析接收结构体
 Serial_CMD Serial_cmd_structor={
     .motor_mode = MODE_NONE,
@@ -18,6 +14,12 @@ int16_t amp_zero[4] = {0};
 int16_t amp[4] = {0};
 int16_t tt_f[4]; // 前馈反馈值
 
+
+static int16_t limit_constrain_(int32_t amp)
+{
+    return (int16_t)(amp>15000?15000:(amp<-15000?-15000:amp));
+}
+
 void StartMotorCtlTask(void *argument)
 {
     /* USER CODE BEGIN StartMotorCtlTask */
@@ -28,9 +30,9 @@ void StartMotorCtlTask(void *argument)
     M3508_Init();
     Chassis_Init();
 
-    for (uint8_t i=0; i<15; i++)
+    for (uint8_t i=1; i<31; i++)
     {
-        WS2812_SetLED(i,255,255,255);
+        WS2812_SetLED(i,0,255,188);
     }
     WS2812_Show();
 
