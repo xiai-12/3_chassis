@@ -47,7 +47,7 @@ static void Radar_Filter(float rx, float ry, float ryaw,float* val)
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// 串口任务函数，用于将队列的数据转移到缓存数组里，同时对串口命令进行解析
+// 串口任务函数
 void StartSerialCmdTask(void *argument)
 {
     /* USER CODE BEGIN StartVisionCmdTask */
@@ -57,7 +57,7 @@ void StartSerialCmdTask(void *argument)
     {
         if (serial_uart.line_rx_flag)
         {
-            Parse_serial_line((char *)serial_uart.line);
+            Parse_serial_line((char *)serial_uart.cmd_line);
             serial_uart.line_rx_flag = 0;
         }
         osDelay(5);
@@ -77,14 +77,9 @@ void StartVisionCmdTask(void *argument)
     /* Infinite loop */
     for(;;)
     {
-        // if (vision_flag)
-        // {
-        //     vision_flag = 0;
-        //     Parse_vision_line(vision_line, vision_len);
-        // }
         if (vision_uart.line_rx_flag)
         {
-            Parse_vision_line(vision_uart.line,vision_uart.line_rx_len);
+            Parse_vision_line(vision_uart.cmd_line,vision_uart.line_rx_len);
             vision_uart.line_rx_flag = 0;
         }
         osDelay(5);
@@ -103,7 +98,7 @@ void StartLocCmdTask(void *argument)
     {
         if (locator_uart.line_rx_flag)
         {
-            Parse_location_line(locator_uart.line,locator_uart.line_rx_len);
+            Parse_location_line(locator_uart.cmd_line,locator_uart.line_rx_len);
             locator_uart.line_rx_flag = 0;
         }
         osDelay(5);
@@ -392,15 +387,13 @@ void StartSerialTxTask(void *argument)
             switch (Serial_cmd_structor.motor_mode)
             {
             case MODE_1:
-                SERIAL_printf("mode1:%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n",
-                                Chassis.targetVel.v_x,Chassis.targetVel.v_y,Chassis.targetVel.w,
+                SERIAL_printf("mode1:%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n",Chassis.targetVel.v_x,Chassis.targetVel.v_y,Chassis.targetVel.w,
                                 m3508_data[Motor1_3508].speed_pid.Tar,m3508_data[Motor1_3508].speed_pid.Act,
                                 m3508_data[Motor2_3508].speed_pid.Tar,m3508_data[Motor2_3508].speed_pid.Act,
                                 m3508_data[Motor3_3508].speed_pid.Tar,m3508_data[Motor3_3508].speed_pid.Act,
                                 m3508_data[Motor4_3508].speed_pid.Tar,m3508_data[Motor4_3508].speed_pid.Act);
                 break;
             case MODE_2:
-
                 SERIAL_printf("%f,%f,%f,%f,%f\r\n",Chassis.GlobalPos.x,Chassis.GlobalPos.y,Chassis.GlobalPos.yaw,m3508_data[Motor1_3508].speed_pid.Tar,m3508_data[Motor2_3508].speed_pid.Tar);
                 break;
 
@@ -419,7 +412,7 @@ void StartSerialTxTask(void *argument)
     /* USER CODE END StartSerialTXTask */
 }
 
-
+// 错误处理
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == USART1)

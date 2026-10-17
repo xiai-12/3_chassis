@@ -13,11 +13,12 @@
 #include <stdlib.h>
 
 typedef struct  Uart_rx_struct{
-    UART_HandleTypeDef* uart_handle;
-    uint8_t line_max;
-    volatile bool line_rx_flag;
-    uint8_t* line;
-    volatile uint8_t line_rx_len;
+    UART_HandleTypeDef* uart_handle;  // 串口句柄
+    uint8_t line_max;                 // dma接收数组大小
+    volatile bool line_rx_flag;       // dma接收标志
+    uint8_t* line;                    // 接收数组
+    uint8_t* cmd_line;                // 解析数组
+    volatile uint16_t line_rx_len;     // 接收数据个数
 }uart_rx_struct;
 
 extern uart_rx_struct serial_uart,vision_uart,locator_uart;
@@ -25,7 +26,7 @@ extern uart_rx_struct serial_uart,vision_uart,locator_uart;
 void SERIAL_printf (char *fmt, ...);
 void Vision_printf (char *fmt, ...);
 
-HAL_StatusTypeDef Uart_rx_init(uart_rx_struct* uart_rx,UART_HandleTypeDef* uart_handle, const uint8_t line_max);
+HAL_StatusTypeDef Uart_rx_init(uart_rx_struct* uart_rx,UART_HandleTypeDef* uart_handle, uint8_t line_max);
 void Uart_callback_func(uart_rx_struct* uart_rx, uint16_t size);
 void Uart_rx_free(const uart_rx_struct* uart_rx);
 void Uart_error_callback(const uart_rx_struct* uart_rx);

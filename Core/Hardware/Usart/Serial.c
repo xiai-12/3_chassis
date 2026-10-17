@@ -3,6 +3,8 @@
 //
 #include "Serial.h"
 
+#include <sys/types.h>
+
 uart_rx_struct serial_uart,vision_uart,locator_uart;
 
 // 串口打印函数
@@ -31,9 +33,16 @@ HAL_StatusTypeDef Uart_rx_init(uart_rx_struct* uart_rx,UART_HandleTypeDef* uart_
     uart_rx->line_rx_flag = 0;
     uart_rx->line_rx_len = 0;
     uart_rx->line = (uint8_t *)malloc(sizeof(uint8_t) * uart_rx->line_max);
-    if (uart_rx->line == NULL) return HAL_ERROR;
+    uart_rx->cmd_line = (uint8_t *)malloc(sizeof(uint8_t) * uart_rx->line_max + 1u);
+    memset(uart_rx->line,0,uart_rx->line_max);
+    memset(uart_rx->cmd_line,0,uart_rx->line_max+1);
+    if ((uart_rx->line == NULL) || (uart_rx->cmd_line == NULL)) return HAL_ERROR;
     // 使用Ex函数，接收不定长数据
-    HAL_UARTEx_ReceiveToIdle_DMA(uart_rx->uart_handle,uart_rx->line,uart_rx->line_max);
+    if (HAL_UARTEx_ReceiveToIdle_DMA(uart_rx->uart_handle,uart_rx->line,uart_rx->line_max) == HAL_ERROR)
+    {
+        SERIAL_printf("uart init failed,retry\r\n");
+        return HAL_ERROR;
+    }
     // 关闭DMA传输过半中断（HAL库默认开启，但我们只需要接收完成中断）
     __HAL_DMA_DISABLE_IT(uart_rx->uart_handle->hdmarx, DMA_IT_HT);
     return HAL_OK;
@@ -43,8 +52,13 @@ void Uart_callback_func(uart_rx_struct* uart_rx, const uint16_t size)
 {
     uart_rx->line_rx_len = size;
     uart_rx->line_rx_flag = 1;
+
+    memcpy(uart_rx->cmd_line, uart_rx->line, size);
+    // 尾部清零：防止解析函数读到上一帧残留的字节
+    memset(uart_rx->cmd_line + size, 0, (uart_rx->line_max + 1U - size));
+
     HAL_UARTEx_ReceiveToIdle_DMA(uart_rx->uart_handle,uart_rx->line,uart_rx->line_max);
-    __HAL_DMA_DISABLE_IT(huart1.hdmarx, DMA_IT_HT);
+    __HAL_DMA_DISABLE_IT(uart_rx->uart_handle->hdmarx, DMA_IT_HT);
 }
 
 void Uart_error_callback(const uart_rx_struct* uart_rx)
@@ -57,10 +71,14 @@ void Uart_error_callback(const uart_rx_struct* uart_rx)
 
 void Uart_rx_free(const uart_rx_struct* uart_rx)
 {
-    free(uart_rx->line);
+    if (uart_rx->cmd_line != NULL)
+    {
+        free(uart_rx->cmd_line);
+    }
+    if (uart_rx->line != NULL)
+    {
+        free(uart_rx->line);
+    }
 }
-
-
-
 
 
