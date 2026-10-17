@@ -5,21 +5,6 @@
 #include "string.h"
 #include "Filter/filter.h"
 
-#define serial_line_max 64                   // 串口接收最大数量
-static uint8_t serial_line[serial_line_max]; // 串口接收缓存数组
-volatile uint8_t serial_flag = 0;            // 串口中断标志位
-volatile uint16_t serial_len  = 0;           // 串口数据长度
-
-#define vision_line_max 64
-static uint8_t vision_line[vision_line_max];
-volatile uint8_t vision_flag = 0;
-volatile uint16_t vision_len  = 0;
-
-#define location_line_max 64
-static uint8_t location_line[location_line_max];
-volatile uint8_t location_flag = 0;
-volatile uint16_t location_len  = 0;
-
 // 函数声明
 static float Parse_float(char *cmd,uint8_t index); // 串口浮点数解析函数，index为浮点数第一位的索引
 static void Radar_Filter(float rx, float ry, float ryaw,float* val);
@@ -44,7 +29,7 @@ static void Radar_Filter(float rx, float ry, float ryaw,float* val)
     if (fabsf(rx - last_rx) > Radar_jump_max || fabsf(ry - last_ry) > Radar_jump_max)
     {
         val[0] = last_rx; val[1] = last_ry; val[2] = last_yaw;
-        last_rx = rx; last_ry = ry; last_yaw = ryaw;// 参考值必须更新，否则下一帧还是判跳变，永远卡住
+        last_rx = rx; last_ry = ry; last_yaw = ryaw;
         return;
     }
     // 低通滤波
@@ -58,7 +43,6 @@ static void Radar_Filter(float rx, float ry, float ryaw,float* val)
     // MAF_Filter(&x_mat,rx);
     // MAF_Filter(&y_mat,rx);
     // MAF_Filter(&yaw_mat,ryaw);
-
     last_rx = rx; last_ry = ry;last_yaw = ryaw;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -67,17 +51,14 @@ static void Radar_Filter(float rx, float ry, float ryaw,float* val)
 void StartSerialCmdTask(void *argument)
 {
     /* USER CODE BEGIN StartVisionCmdTask */
-    // 使用Ex函数，接收不定长数据
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart1, serial_line,sizeof(serial_line));
-    // 关闭DMA传输过半中断（HAL库默认开启，但我们只需要接收完成中断）
-    __HAL_DMA_DISABLE_IT(huart1.hdmarx, DMA_IT_HT);
+    Uart_rx_init(&serial_uart,&huart1,64);
     /* Infinite loop */
     for(;;)
     {
-        if (serial_flag)
+        if (serial_uart.line_rx_flag)
         {
-            serial_flag = 0;
-            Parse_serial_line((char *)serial_line);
+            Parse_serial_line((char *)serial_uart.line);
+            serial_uart.line_rx_flag = 0;
         }
         osDelay(5);
     }
@@ -92,19 +73,19 @@ void StartVisionCmdTask(void *argument)
     Filter_Init_MAF(&x_mat);
     Filter_Init_MAF(&y_mat);
     Filter_Init_MAF(&yaw_mat);
-    memset(vision_line,0,sizeof(vision_line));
-    // 使用Ex函数，接收不定长数据
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart2, vision_line,sizeof(vision_line));
-    // 关闭DMA传输过半中断
-    __HAL_DMA_DISABLE_IT(huart2.hdmarx, DMA_IT_HT);
-
+    Uart_rx_init(&vision_uart,&huart2,64);
     /* Infinite loop */
     for(;;)
     {
-        if (vision_flag)
+        // if (vision_flag)
+        // {
+        //     vision_flag = 0;
+        //     Parse_vision_line(vision_line, vision_len);
+        // }
+        if (vision_uart.line_rx_flag)
         {
-            vision_flag = 0;
-            Parse_vision_line(vision_line, vision_len);
+            Parse_vision_line(vision_uart.line,vision_uart.line_rx_len);
+            vision_uart.line_rx_flag = 0;
         }
         osDelay(5);
     }
@@ -116,19 +97,14 @@ void StartVisionCmdTask(void *argument)
 void StartLocCmdTask(void *argument)
 {
     /* USER CODE BEGIN StartVisionCmdTask */
-    memset(location_line,0,sizeof(location_line));
-    // 使用Ex函数，接收不定长数据
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart3, location_line,sizeof(location_line));
-    // 关闭DMA传输过半中断
-    __HAL_DMA_DISABLE_IT(huart3.hdmarx, DMA_IT_HT);
-
+    Uart_rx_init(&locator_uart,&huart3,64);
     /* Infinite loop */
     for(;;)
     {
-        if (location_flag)
+        if (locator_uart.line_rx_flag)
         {
-            location_flag = 0;
-            Parse_location_line(location_line);
+            Parse_location_line(locator_uart.line,locator_uart.line_rx_len);
+            locator_uart.line_rx_flag = 0;
         }
         osDelay(5);
     }
@@ -141,29 +117,17 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
     if (huart == &huart1)
     {
-        serial_len  = Size;
-        serial_flag = 1;
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, serial_line, sizeof(serial_line));
-        __HAL_DMA_DISABLE_IT(huart1.hdmarx, DMA_IT_HT);
+        Uart_callback_func(&serial_uart,Size);
     }
-
     if (huart == &huart2)
     {
-        vision_len  = Size;
-        vision_flag = 1;
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart2, vision_line, sizeof(vision_line));
-        __HAL_DMA_DISABLE_IT(huart2.hdmarx, DMA_IT_HT);
+       Uart_callback_func(&vision_uart,Size);
     }
-
     if (huart == &huart3)
     {
-        location_len  = Size;
-        location_flag = 1;
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart3, location_line, sizeof(location_line));
-        __HAL_DMA_DISABLE_IT(huart3.hdmarx, DMA_IT_HT);
+        Uart_callback_func(&locator_uart,Size);
     }
 }
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 浮点数解析函数，index为浮点数第一个出现的位置，用于取出完成的浮点数据
@@ -359,7 +323,7 @@ void Parse_vision_line(const uint8_t* cmd, uint16_t len)
     switch (cmd[0])
     {
     case 0x5A:
-        if (vision_len == 11 && cmd[1] == 0xA5 && cmd[2] == 0x01  && cmd[9] == crc_check && cmd[10] == 0xED)
+        if (len == 11 && cmd[1] == 0xA5 && cmd[2] == 0x01  && cmd[9] == crc_check && cmd[10] == 0xED)
         {
             Visual_Receive(cmd);
             Vision_cmd_structor.vx =  (float)vision_lia_raw.x / v_scale_rate;
@@ -369,7 +333,7 @@ void Parse_vision_line(const uint8_t* cmd, uint16_t len)
         }
         break;
     case 0x7E:
-        if (vision_len == 14 && cmd[13] == 0x21)
+        if (len == 14 && cmd[13] == 0x21)
         {
             Visual_Receice_pos(cmd);
             float rx   = (float)vision_lia_raw_pos.pos_x / pos_scale_rate;
@@ -390,11 +354,11 @@ void Parse_vision_line(const uint8_t* cmd, uint16_t len)
 }
 
 //码盘+imu解析函数
-void Parse_location_line(const uint8_t* cmd)
+void Parse_location_line(const uint8_t* cmd,uint16_t len)
 {
     uint8_t rx_buf[32];
     float rx_data[8];
-    if (cmd[0] == '[' && cmd[1] == '8' && location_len == 36)
+    if (cmd[0] == '[' && cmd[1] == '8' && len == 36)
     {
         for (uint8_t i = 0; i < 32; i++)
         {
@@ -412,9 +376,7 @@ void Parse_location_line(const uint8_t* cmd)
     }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/*
- * 串口发送函数，根据模式选择发送不同内容
- */
+//串口发送函数
 void StartSerialTxTask(void *argument)
 {
     /* USER CODE BEGIN StartSerialTXTask */
@@ -462,16 +424,14 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == USART1)
     {
-        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_OREF | UART_CLEAR_NEF | UART_CLEAR_FEF | UART_CLEAR_PEF);
-        huart->ErrorCode = HAL_UART_ERROR_NONE;
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, serial_line, sizeof(serial_line));
-        __HAL_DMA_DISABLE_IT(huart1.hdmarx, DMA_IT_HT);
+        Uart_error_callback(&serial_uart);
     }
     else if (huart->Instance == USART2)
     {
-        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_OREF | UART_CLEAR_NEF | UART_CLEAR_FEF | UART_CLEAR_PEF);
-        huart->ErrorCode = HAL_UART_ERROR_NONE;
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart2, vision_line, sizeof(vision_line));
-        __HAL_DMA_DISABLE_IT(huart2.hdmarx, DMA_IT_HT);
+        Uart_error_callback(&vision_uart);
+    }
+    else if (huart->Instance == USART3)
+    {
+        Uart_error_callback(&locator_uart);
     }
 }

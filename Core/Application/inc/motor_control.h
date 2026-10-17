@@ -89,6 +89,6 @@ extern  PID_Structor chassis_pos_vy;
 void Parse_serial_line(char *cmd);
 void Motor_Reset(void);
 void Parse_vision_line(const uint8_t* cmd, uint16_t len);
-void Parse_location_line(const uint8_t* cmd);
+void Parse_location_line(const uint8_t* cmd,uint16_t len);
 
 #endif //ROBOCON_TEST_MOTOR_CONTROL_H
