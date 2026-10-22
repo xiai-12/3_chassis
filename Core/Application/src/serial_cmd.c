@@ -107,6 +107,23 @@ void StartLocCmdTask(void *argument)
     /* USER CODE END StartVisionCmdTask */
 }
 
+void StartTjcCmdTask(void *argument)
+{
+    /* USER CODE BEGIN StartTjcCmdTask */
+    Uart_rx_init(&tjc_uart,&huart4,32);
+    /* Infinite loop */
+    for(;;)
+    {
+        if (tjc_uart.line_rx_flag)
+        {
+            TJC_Parse(tjc_uart.cmd_line,tjc_uart.line_rx_len);
+            tjc_uart.line_rx_flag = 0;
+        }
+        osDelay(5);
+    }
+    /* USER CODE END StartTjcCmdTask */
+}
+
 // 串口接收中断，用于将接收到的数据转移到队列
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
@@ -121,6 +138,10 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
     if (huart == &huart3)
     {
         Uart_callback_func(&locator_uart,Size);
+    }
+    if (huart == &huart4)
+    {
+        Uart_callback_func(&tjc_uart,Size);
     }
 }
 
@@ -364,13 +385,29 @@ void Parse_location_line(const uint8_t* cmd,uint16_t len)
         Encoder_imu_cmd_structor.y_count = rx_data[1];
         Encoder_imu_cmd_structor.x_turns = rx_data[2];
         Encoder_imu_cmd_structor.y_turns = rx_data[3];
-        Encoder_imu_cmd_structor.x_distance = rx_data[4];
-        Encoder_imu_cmd_structor.y_distance = rx_data[5];
+        Encoder_imu_cmd_structor.x_distance = rx_data[4]/100.0f; // m
+        Encoder_imu_cmd_structor.y_distance = rx_data[5]/100.0f; // m
         Encoder_imu_cmd_structor.yaw = rx_data[6];
         Encoder_imu_cmd_structor.yaw_nor = rx_data[7];
     }
 }
+
+void TJC_Parse(uint8_t *buf, uint16_t len)
+{
+    if (len == 7 && buf[0] == 0x65 &&
+        buf[4] == 0xFF && buf[5] == 0xFF && buf[6] == 0xFF)
+    {
+        uint8_t page  = buf[1];
+        uint8_t comp  = buf[2];
+        uint8_t event = buf[3];
+        if ( event == 0x01)
+        {
+            HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+        }
+    }
+}
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 //串口发送函数
 void StartSerialTxTask(void *argument)
 {
@@ -412,6 +449,7 @@ void StartSerialTxTask(void *argument)
     /* USER CODE END StartSerialTXTask */
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 错误处理
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {

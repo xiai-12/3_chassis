@@ -16,6 +16,7 @@
 #include "Filter/filter.h"
 #include "Chassis/chassis.h"
 #include "WS2812/ws2812.h"
+#include "TJC/tjc_uart_hmi.h"
 
 
 // 电机运动模式选择
@@ -67,14 +68,14 @@ typedef struct Vision_CMD_Structor
 // 码盘+imu数据接收体
 typedef struct Encoder_imu_Structor
 {
-    float x_count;
-    float y_count;
-    float x_turns;
-    float y_turns;
-    float x_distance;
-    float y_distance;
-    float yaw;
-    float yaw_nor;
+    float x_count;          // x原始值
+    float y_count;          // y原始值
+    float x_turns;          // x圈数
+    float y_turns;          // y圈数
+    float x_distance;       // x距离，m
+    float y_distance;       // y距离，m
+    float yaw;              // 航向角
+    float yaw_nor;          // 航向角(归一化)
 }Encoder_imu_CMD;
 
 // pid结构体可外部引用
@@ -90,5 +91,6 @@ void Parse_serial_line(char *cmd);
 void Motor_Reset(void);
 void Parse_vision_line(const uint8_t* cmd, uint16_t len);
 void Parse_location_line(const uint8_t* cmd,uint16_t len);
+void TJC_Parse(uint8_t *buf, uint16_t len);
 
 #endif //ROBOCON_TEST_MOTOR_CONTROL_H

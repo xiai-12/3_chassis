@@ -89,6 +89,13 @@ const osThreadAttr_t LocCmdTask_attributes = {
   .priority = (osPriority_t) osPriorityAboveNormal,
   .stack_size = 512 * 4
 };
+/* Definitions for TjcCmdTask */
+osThreadId_t TjcCmdTaskHandle;
+const osThreadAttr_t TjcCmdTask_attributes = {
+  .name = "TjcCmdTask",
+  .priority = (osPriority_t) osPriorityBelowNormal,
+  .stack_size = 512 * 4
+};
 /* Definitions for NrfIrqSem */
 osSemaphoreId_t NrfIrqSemHandle;
 const osSemaphoreAttr_t NrfIrqSem_attributes = {
@@ -106,6 +113,7 @@ void StartSerialCmdTask(void *argument);
 void StartNrfCmdTask(void *argument);
 void StartVisionCmdTask(void *argument);
 void StartLocCmdTask(void *argument);
+void StartTjcCmdTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -157,6 +165,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of LocCmdTask */
   LocCmdTaskHandle = osThreadNew(StartLocCmdTask, NULL, &LocCmdTask_attributes);
+
+  /* creation of TjcCmdTask */
+  TjcCmdTaskHandle = osThreadNew(StartTjcCmdTask, NULL, &TjcCmdTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -274,6 +285,24 @@ __weak void StartLocCmdTask(void *argument)
     osDelay(1);
   }
   /* USER CODE END StartLocCmdTask */
+}
+
+/* USER CODE BEGIN Header_StartTjcCmdTask */
+/**
+* @brief Function implementing the TjcCmdTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTjcCmdTask */
+__weak void StartTjcCmdTask(void *argument)
+{
+  /* USER CODE BEGIN StartTjcCmdTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartTjcCmdTask */
 }
 
 /* Private application code --------------------------------------------------*/

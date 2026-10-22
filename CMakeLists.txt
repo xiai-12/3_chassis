@@ -57,6 +57,7 @@ add_executable(${CMAKE_PROJECT_NAME}
         Core/Hardware/Filter/filter.h
         Core/Hardware/WS2812/ws2812.c
         Core/Hardware/WS2812/ws2812.h
+        Core/Hardware/TJC/tjc_uart_hmi.c
 )
 
 # print float

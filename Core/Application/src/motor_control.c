@@ -26,15 +26,8 @@ void StartMotorCtlTask(void *argument)
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xPeriod = pdMS_TO_TICKS(5);
 
-    WS2812_Init();
     M3508_Init();
     Chassis_Init();
-
-    for (uint8_t i=1; i<31; i++)
-    {
-        WS2812_SetLED(i,0,255,188);
-    }
-    WS2812_Show();
 
     Chassis_WheelType_t m3508_pos_act;
 

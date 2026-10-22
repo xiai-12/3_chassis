@@ -3,9 +3,7 @@
 //
 #include "Serial.h"
 
-#include <sys/types.h>
-
-uart_rx_struct serial_uart,vision_uart,locator_uart;
+uart_rx_struct serial_uart,vision_uart,locator_uart,tjc_uart;
 
 // 串口打印函数
 void SERIAL_printf (char *fmt, ...){

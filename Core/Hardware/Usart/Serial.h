@@ -11,6 +11,7 @@
 #include <stdarg.h>
 #include "stdbool.h"
 #include <stdlib.h>
+#include <sys/types.h>
 
 typedef struct  Uart_rx_struct{
     UART_HandleTypeDef* uart_handle;  // 串口句柄
@@ -21,7 +22,7 @@ typedef struct  Uart_rx_struct{
     volatile uint16_t line_rx_len;     // 接收数据个数
 }uart_rx_struct;
 
-extern uart_rx_struct serial_uart,vision_uart,locator_uart;
+extern uart_rx_struct serial_uart,vision_uart,locator_uart,tjc_uart;
 
 void SERIAL_printf (char *fmt, ...);
 void Vision_printf (char *fmt, ...);
