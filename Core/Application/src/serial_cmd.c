@@ -40,9 +40,9 @@ static void Radar_Filter(float rx, float ry, float ryaw,float* val)
     else if (yaw_err < -M_PI) yaw_err += 2.0f *(float) M_PI;
     val[2] = last_yaw + Filter_alpha * yaw_err;
     // 滑动窗口滤波
-    // MAF_Filter(&x_mat,rx);
-    // MAF_Filter(&y_mat,rx);
-    // MAF_Filter(&yaw_mat,ryaw);
+    MAF_Filter(&x_mat,rx);
+    MAF_Filter(&y_mat,rx);
+    MAF_Filter(&yaw_mat,ryaw);
     last_rx = rx; last_ry = ry;last_yaw = ryaw;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -184,7 +184,7 @@ void Parse_serial_line(char *cmd)
 {
     uint8_t mode = 0;
 
-    // mode debug_mode x y  w speed_tar location_tar angle
+    // mode debug_mode x y  w speed_tar location_tar angle kyaw
     switch (cmd[0])
     {
         // mode
@@ -215,8 +215,17 @@ void Parse_serial_line(char *cmd)
         break;
         // y
         case 'y':
-            Serial_cmd_structor.y = Parse_float(cmd,2);
-            SERIAL_printf("vx:%f,vy:%f,w:%f\r\n",Serial_cmd_structor.x,Serial_cmd_structor.y,Serial_cmd_structor.w);
+            if (cmd[1] == ':')
+            {
+                Serial_cmd_structor.y = Parse_float(cmd,2);
+                SERIAL_printf("vx:%f,vy:%f,w:%f\r\n",Serial_cmd_structor.x,Serial_cmd_structor.y,Serial_cmd_structor.w);
+            }
+            else if (cmd[1] == 'a')
+            {
+                // yaw
+                Serial_cmd_structor.yaw = Parse_float(cmd,4);
+                SERIAL_printf("yaw:%f\r\n",Serial_cmd_structor.yaw);
+            }
         break;
         // w
         case 'w':
@@ -308,6 +317,7 @@ void Parse_serial_line(char *cmd)
                 default:
                     break;
                 }
+                PID_ModifyParams(&chassis_pos_vy,Serial_cmd_structor.kp,Serial_cmd_structor.ki,Serial_cmd_structor.kd);
             }
             // for (uint8_t i = 1; i < 4; i++)
             // {
@@ -315,7 +325,6 @@ void Parse_serial_line(char *cmd)
             //     m3508_data[i].speed_pid.ki = pid_ptr->ki;
             //     m3508_data[i].speed_pid.kd = pid_ptr->kd;
             // }
-            PID_ModifyParams(&chassis_pos_vy,Serial_cmd_structor.kp,Serial_cmd_structor.ki,Serial_cmd_structor.kd);
             SERIAL_printf("kp:%3f ki:%3f kd:%3f kt:%3f\r\n",pid_ptr->kp,pid_ptr->ki,pid_ptr->kd,Serial_cmd_structor.kt);
         }
         return;
@@ -415,9 +424,9 @@ void StartSerialTxTask(void *argument)
     /* Infinite loop */
     for(;;)
     {
-        //SERIAL_printf("%f,%f,%f,%f,%f\r\n",Vision_cmd_structor.pos_x,Vision_cmd_structor.pos_y,Vision_cmd_structor.yaw,Chassis.targetVel.v_x, Chassis.targetVel.v_y);
-        SERIAL_printf("%f,%f,%f,%f,%f,%f,%f,%f\r\n",Encoder_imu_cmd_structor.x_count,Encoder_imu_cmd_structor.y_count,Encoder_imu_cmd_structor.x_turns,Encoder_imu_cmd_structor.y_turns,
-            Encoder_imu_cmd_structor.x_distance,Encoder_imu_cmd_structor.y_distance,Encoder_imu_cmd_structor.yaw,Encoder_imu_cmd_structor.yaw_nor);
+        SERIAL_printf("%f,%f,%f,%f,%f\r\n",Vision_cmd_structor.pos_x,Vision_cmd_structor.pos_y,Vision_cmd_structor.yaw,Chassis.targetVel.v_x, Chassis.targetVel.v_y);
+        // SERIAL_printf("%f,%f,%f,%f,%f,%f,%f,%f\r\n",Encoder_imu_cmd_structor.x_count,Encoder_imu_cmd_structor.y_count,Encoder_imu_cmd_structor.x_turns,Encoder_imu_cmd_structor.y_turns,
+        //     Encoder_imu_cmd_structor.x_distance,Encoder_imu_cmd_structor.y_distance,Encoder_imu_cmd_structor.yaw,Encoder_imu_cmd_structor.yaw_nor);
         //SERIAL_printf("keys:%d,button:%d\r\n",nrf_chassis_cmd.keys,nrf_chassis_cmd.button);
         if ((Serial_cmd_structor.debug_mode == DEBUG_FALSE || nrf_chassis_cmd.keys == 4))
         {
@@ -431,7 +440,8 @@ void StartSerialTxTask(void *argument)
                                 m3508_data[Motor4_3508].speed_pid.Tar,m3508_data[Motor4_3508].speed_pid.Act);
                 break;
             case MODE_2:
-                SERIAL_printf("%f,%f,%f,%f,%f\r\n",Chassis.GlobalPos.x,Chassis.GlobalPos.y,Chassis.GlobalPos.yaw,m3508_data[Motor1_3508].speed_pid.Tar,m3508_data[Motor2_3508].speed_pid.Tar);
+                SERIAL_printf("%f,%f,%f,%f,%f,%f\r\n",Chassis.GlobalPos.x,Chassis.GlobalPos.y,Chassis.GlobalPos.yaw,Vision_cmd_structor.pos_x,Vision_cmd_structor.pos_y,Vision_cmd_structor.yaw);
+                //SERIAL_printf("%f,%f,%f,%f\r\n",m3508_data[Motor1_3508].speed_pid.Tar,m3508_data[Motor1_3508].speed_pid.Act,m3508_data[Motor2_3508].speed_pid.Tar,m3508_data[Motor2_3508].speed_pid.Act);
                 break;
 
             case MODE_3:
@@ -444,7 +454,7 @@ void StartSerialTxTask(void *argument)
                 break;
             }
         }
-        osDelay(30);
+        osDelay(50);
     }
     /* USER CODE END StartSerialTXTask */
 }

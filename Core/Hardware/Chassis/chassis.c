@@ -29,12 +29,16 @@
  *
  *
  *     id1     id4
- *                   y
- *                  ^
+ *                  x
  *                  |
  *                  |
- *             x <————
+ *          y <—— ——
  *
+ *
+ *  leida    x<—— ——
+ *                   |
+ *                   |
+ *                   y
  */
 
 Chassis_t Chassis;
@@ -43,12 +47,13 @@ Chassis_WheelType_t Chassis_IK_Body2Wheel(Chassis_Velocity_t* BodyVelocity);    
 Chassis_WheelType_t Chassis_IK_Global2Wheel(Chassis_Velocity_t* GlobalVelocity, float Yaw); // 逆运动学解算（世界坐标系）
 Chassis_WheelType_t Chassis_PositionControl_body(Chassis_Pos_t position);                   // 位置控制
 
-PID_Structor chassis_pos_vx;
-PID_Structor chassis_pos_vy;
+PID_Structor chassis_pos_vx,chassis_pos_vy,chassis_pos_yaw;
 PID_Improve  chassis_pos_im={
     .deriv_on_meas = 1, .deriv_filter = 1, .deriv_filter_alpha =  0.80f,
-    .integral_limit = 1, .integral_limit_val = 5.0f
+    .integral_limit = 1, .integral_limit_val = 5.0f,
+    .out_dead_zone = 1, .out_dead_zone_val = 0.02f
 };
+PID_Improve pid_im_none;
 
 /**
  * 初始化底盘参数
@@ -82,8 +87,9 @@ void Chassis_Init(void) {
     Chassis.targetVel.v_y = 0.0f;
     Chassis.targetVel.w = 0.0f;
 
-    PID_Init(&chassis_pos_vx,0.6f,0.0f,0.0f,1.0f,-1.0f,&chassis_pos_im);
-    PID_Init(&chassis_pos_vy,0.6f,0.0f,0.0f,1.0f,-1.0f,&chassis_pos_im);
+    PID_Init(&chassis_pos_vx,1.2f,0.0f,0.0f,1.0f,-1.0f,&chassis_pos_im);
+    PID_Init(&chassis_pos_vy,1.2f,0.0f,0.0f,1.0f,-1.0f,&chassis_pos_im);
+    PID_Init(&chassis_pos_yaw,0.6f,0.0f,0.0f,3.0f,-3.0f,&pid_im_none);
 }
 
 /**
@@ -112,10 +118,9 @@ void Chassis_Control(Chassis_Frame_t frame, Chassis_Mode_t mode, float x, float 
             chassis_pos_vy.Tar = y;
             chassis_pos_vy.Act = Chassis.GlobalPos.y;
             PID_Controllor(&chassis_pos_vx);
-            Chassis.targetVel.v_x =  chassis_pos_vx.Out;
             PID_Controllor(&chassis_pos_vy);
+            Chassis.targetVel.v_x =  chassis_pos_vx.Out;
             Chassis.targetVel.v_y =  chassis_pos_vy.Out;
-
 
             // float err_x = x - Chassis.GlobalPos.x;
             // float err_y = y - Chassis.GlobalPos.y;
@@ -150,11 +155,17 @@ void Chassis_Control(Chassis_Frame_t frame, Chassis_Mode_t mode, float x, float 
         if (yaw_err >  M_PI)  yaw_err -= 2.0f * (float)M_PI;
         else if (yaw_err < -M_PI) yaw_err += 2.0f * (float)M_PI;
 
-        float CHASSIS_W_P = 0.2f;
-        Chassis.targetVel.w = yaw_err * CHASSIS_W_P;
+        // float CHASSIS_W_P = 0.6f;
+        // Chassis.targetVel.w = yaw_err * CHASSIS_W_P;
+        // if (Chassis.targetVel.w > 3.0f)   Chassis.targetVel.w = 3.0f;
+        // if (Chassis.targetVel.w < -3.0f)  Chassis.targetVel.w = -3.0f;
 
-        if (Chassis.targetVel.w > 3.0f)   Chassis.targetVel.w = 3.0f;
-        if (Chassis.targetVel.w < -3.0f)  Chassis.targetVel.w = -3.0f;
+        chassis_pos_yaw.Tar = Chassis.targetPos.yaw;
+        chassis_pos_yaw.Act = para;
+        PID_Controllor(&chassis_pos_yaw);
+        Chassis.targetVel.w = chassis_pos_yaw.Out;
+
+
     }
 
     if (frame == Chassis_Global || mode == Chassis_Position) {

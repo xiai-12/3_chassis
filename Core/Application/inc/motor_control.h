@@ -47,6 +47,7 @@ typedef struct Serial_CMD_Struct
     float x;                             // x
     float y;                             // y
     float w;                             // 角速度
+    float yaw;                           // 目标偏航角
     float kp;
     float ki;
     float kd;
